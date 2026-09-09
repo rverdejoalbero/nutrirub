@@ -65,3 +65,31 @@ export const IconoLapiz = svg(
   </>,
 )
 export const IconoEnviar = svg(<path d="M4 12h15m0 0-6-6m6 6-6 6" />)
+
+export const IconoPlato = svg(
+  <>
+    <circle cx="12" cy="12" r="8.2" />
+    <circle cx="12" cy="12" r="4.4" />
+  </>,
+)
+
+export const IconoEstrella = svg(
+  <path d="m12 4.4 2.3 4.9 5.2.7-3.8 3.7.9 5.3-4.6-2.5-4.6 2.5.9-5.3-3.8-3.7 5.2-.7Z" />,
+)
+
+export const IconoEstrellaLlena = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+    <path
+      d="m12 4.4 2.3 4.9 5.2.7-3.8 3.7.9 5.3-4.6-2.5-4.6 2.5.9-5.3-3.8-3.7 5.2-.7Z"
+      fill="currentColor"
+      stroke="currentColor"
+    />
+  </svg>
+)
+
+export const IconoCopiar = svg(
+  <>
+    <rect x="9" y="9" width="11" height="11" rx="2" />
+    <path d="M15 5H6a2 2 0 0 0-2 2v9" />
+  </>,
+)

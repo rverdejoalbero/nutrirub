@@ -5,25 +5,54 @@ import { db } from '../db/db'
 import { buscarProductos } from '../lib/buscar'
 import { ent } from '../lib/formato'
 import { Vacio } from '../components/UI'
-import { IconoAdelante, IconoMas } from '../components/Iconos'
+import {
+  IconoAdelante,
+  IconoEstrella,
+  IconoEstrellaLlena,
+  IconoMas,
+} from '../components/Iconos'
+import type { Producto } from '../db/types'
 
 type Orden = 'recientes' | 'alfabetico'
+type Filtro = 'todos' | 'favoritos' | 'platos'
+
+const DESCRIPCION_ORIGEN: Record<Producto['origen'], string> = {
+  foto: 'Leído de etiqueta',
+  manual: 'A mano',
+  receta: 'Plato compuesto',
+}
+
+/** Un plato se edita en su propia pantalla, que sabe de ingredientes. */
+export const rutaDe = (p: Producto): string =>
+  p.origen === 'receta' ? `/platos/${p.id}` : `/alimentos/${p.id}`
+
+export async function alternarFavorito(p: Producto): Promise<void> {
+  if (p.id) await db.productos.update(p.id, { favorito: !p.favorito })
+}
 
 export default function Alimentos() {
   const nav = useNavigate()
   const [consulta, setConsulta] = useState('')
   const [orden, setOrden] = useState<Orden>('recientes')
+  const [filtro, setFiltro] = useState<Filtro>('todos')
 
   const productos = useLiveQuery(() => db.productos.toArray(), [], undefined)
+  const nFavoritos = (productos ?? []).filter((p) => p.favorito).length
+  const nPlatos = (productos ?? []).filter((p) => p.origen === 'receta').length
 
   const listados = useMemo(() => {
-    const base = buscarProductos(productos ?? [], consulta)
-    return [...base].sort((a, b) =>
-      orden === 'alfabetico'
+    let base = productos ?? []
+    if (filtro === 'favoritos') base = base.filter((p) => p.favorito)
+    if (filtro === 'platos') base = base.filter((p) => p.origen === 'receta')
+    base = buscarProductos(base, consulta)
+    return [...base].sort((a, b) => {
+      // Los favoritos primero siempre: es su razon de ser.
+      if (!!a.favorito !== !!b.favorito) return a.favorito ? -1 : 1
+      return orden === 'alfabetico'
         ? a.nombre.localeCompare(b.nombre, 'es')
-        : (b.ultimoUso ?? b.creadoEn) - (a.ultimoUso ?? a.creadoEn),
-    )
-  }, [productos, consulta, orden])
+        : (b.ultimoUso ?? b.creadoEn) - (a.ultimoUso ?? a.creadoEn)
+    })
+  }, [productos, consulta, orden, filtro])
 
   return (
     <>
@@ -45,6 +74,32 @@ export default function Alimentos() {
               placeholder="Buscar por nombre o marca"
             />
           </label>
+
+          <div className="chips">
+            <button
+              className={`chip ${filtro === 'todos' ? 'activo' : ''}`}
+              onClick={() => setFiltro('todos')}
+            >
+              Todos
+            </button>
+            {nFavoritos > 0 && (
+              <button
+                className={`chip ${filtro === 'favoritos' ? 'activo' : ''}`}
+                onClick={() => setFiltro('favoritos')}
+              >
+                Favoritos · {nFavoritos}
+              </button>
+            )}
+            {nPlatos > 0 && (
+              <button
+                className={`chip ${filtro === 'platos' ? 'activo' : ''}`}
+                onClick={() => setFiltro('platos')}
+              >
+                Platos · {nPlatos}
+              </button>
+            )}
+          </div>
+
           <div className="chips">
             <button
               className={`chip ${orden === 'recientes' ? 'activo' : ''}`}
@@ -71,17 +126,17 @@ export default function Alimentos() {
             </Link>
           </Vacio>
         ) : listados.length === 0 ? (
-          <Vacio texto={`Nada coincide con «${consulta}».`} />
+          <Vacio texto={consulta ? `Nada coincide con «${consulta}».` : 'Nada por aquí.'} />
         ) : (
           <ul className="lista">
             {listados.map((p) => (
-              <li key={p.id}>
-                <button className="fila-item" onClick={() => nav(`/alimentos/${p.id}`)}>
+              <li key={p.id} style={{ display: 'flex', alignItems: 'center' }}>
+                <button className="fila-item" onClick={() => nav(rutaDe(p))}>
                   <span className="texto">
                     <span className="titulo">{p.nombre}</span>
                     <span className="sub">
                       {p.marca ? `${p.marca} · ` : ''}
-                      {p.origen === 'foto' ? 'Leído de etiqueta' : 'A mano'}
+                      {DESCRIPCION_ORIGEN[p.origen]}
                     </span>
                   </span>
                   <span className="derecha">
@@ -89,6 +144,17 @@ export default function Alimentos() {
                     <span className="u">kcal/100 {p.unidadBase}</span>
                   </span>
                   <IconoAdelante />
+                </button>
+                <button
+                  className={`borrar ${p.favorito ? 'favorito' : ''}`}
+                  style={{ marginRight: 8 }}
+                  aria-pressed={!!p.favorito}
+                  aria-label={
+                    p.favorito ? `Quitar ${p.nombre} de favoritos` : `Marcar ${p.nombre} como favorito`
+                  }
+                  onClick={() => alternarFavorito(p)}
+                >
+                  {p.favorito ? <IconoEstrellaLlena /> : <IconoEstrella />}
                 </button>
               </li>
             ))}

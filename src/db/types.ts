@@ -18,6 +18,15 @@ export interface PorcionRapida {
   cantidad: number
 }
 
+/** Un ingrediente dentro de un plato compuesto. */
+export interface Ingrediente {
+  productoId: number
+  /** Copia del nombre, para que el plato siga legible si se borra el producto. */
+  nombre: string
+  cantidad: number
+  unidad: Unidad
+}
+
 /** Biblioteca de alimentos. TODOS los valores son por 100 g / 100 ml. */
 export interface Producto {
   id?: number
@@ -34,10 +43,27 @@ export interface Producto {
   fibra?: number
   sal?: number
   porcionesRapidas?: PorcionRapida[]
-  origen: 'foto' | 'manual'
+  origen: 'foto' | 'manual' | 'receta'
   fotoEtiqueta?: Blob
   creadoEn: number
   ultimoUso?: number
+  /** Se ordenan primero en el buscador. */
+  favorito?: boolean
+
+  // --- solo en los platos compuestos (origen 'receta') ---
+  /**
+   * Un plato compuesto se guarda como un producto normal, con sus valores ya
+   * calculados por 100 g. Asi el buscador, el registro, las porciones rapidas
+   * y las estadisticas funcionan sin enterarse de que es una receta.
+   * Estos campos son la memoria de como se calculo, para poder reeditarlo.
+   */
+  ingredientes?: Ingrediente[]
+  /**
+   * Lo que pesa el plato terminado. No es la suma de los ingredientes: la
+   * pasta absorbe agua y el guiso reduce. Sin este numero, los macros por
+   * 100 g del plato cocinado salen mal.
+   */
+  pesoFinal?: number
 }
 
 /**

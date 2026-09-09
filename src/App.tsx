@@ -13,6 +13,7 @@ import Ajustes from './pages/Ajustes'
 import NuevoProducto from './pages/NuevoProducto'
 import EditarProducto from './pages/EditarProducto'
 import RevisarProducto from './pages/RevisarProducto'
+import EditarPlato from './pages/EditarPlato'
 
 const PESTANAS = [
   { a: '/hoy', texto: 'Hoy', Icono: IconoHoy },
@@ -45,6 +46,8 @@ export default function App() {
           <Route path="/alimentos/nuevo" element={<NuevoProducto />} />
           <Route path="/alimentos/revisar" element={<RevisarProducto />} />
           <Route path="/alimentos/:id" element={<EditarProducto />} />
+          <Route path="/platos/nuevo" element={<EditarPlato />} />
+          <Route path="/platos/:id" element={<EditarPlato />} />
           <Route path="/estadisticas" element={<Estadisticas />} />
           <Route path="/asistente" element={<Asistente />} />
           <Route path="/ajustes" element={<Ajustes />} />

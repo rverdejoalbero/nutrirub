@@ -10,11 +10,14 @@ import { leerAjustes } from '../lib/ajustes'
 import { Resumen } from '../components/BarrasMacro'
 import { AnadirComida, momentoPorHora } from '../components/AnadirComida'
 import { Confirmar, Vacio } from '../components/UI'
+import { diaAnteriorConDatos, duplicarDia } from '../lib/diario'
+import { frasePosesiva } from '../lib/fecha'
 import {
   IconoAdelante,
   IconoAjustes,
   IconoAtras,
   IconoCerrar,
+  IconoCopiar,
   IconoMas,
 } from '../components/Iconos'
 
@@ -33,6 +36,8 @@ export default function Hoy() {
   const [anadiendo, setAnadiendo] = useState<Momento | true | null>(null)
   const [editando, setEditando] = useState<Registro | null>(null)
   const [borrando, setBorrando] = useState<Registro | null>(null)
+  const [duplicando, setDuplicando] = useState(false)
+  const [aviso, setAviso] = useState<string | null>(null)
 
   const registros = useLiveQuery(
     () => db.registros.where('fecha').equals(fecha).toArray(),
@@ -41,6 +46,8 @@ export default function Hoy() {
   )
   const objetivo = useLiveQuery(() => objetivosEn(fecha), [fecha], undefined)
   const nProductos = useLiveQuery(() => db.productos.count(), [], undefined)
+  // De donde copiar: el ultimo dia anterior que tenga algo registrado.
+  const diaFuente = useLiveQuery(() => diaAnteriorConDatos(fecha), [fecha], undefined)
   const avisoCopia = useAvisoCopia() && (registros?.length ?? 0) > 0
 
   const total = useMemo(() => sumar(registros ?? []), [registros])
@@ -96,6 +103,14 @@ export default function Hoy() {
       <main>
         {objetivo && <Resumen consumido={total} objetivo={objetivo} />}
 
+        {aviso && (
+          <div className="contenido">
+            <p className="nota" style={{ color: 'var(--carbos)', marginTop: 12 }} role="status">
+              {aviso}
+            </p>
+          </div>
+        )}
+
         {avisoCopia && (
           <div className="contenido">
             <div className="aviso-caja">
@@ -107,10 +122,17 @@ export default function Hoy() {
 
         {registros === undefined ? null : registros.length === 0 ? (
           <Vacio texto={esHoy ? 'Aún no has registrado nada hoy.' : 'Nada registrado este día.'}>
-            {nProductos === 0 && (
+            {nProductos === 0 ? (
               <Link className="boton secundario" to="/alimentos/nuevo">
                 Dar de alta tu primer alimento
               </Link>
+            ) : (
+              diaFuente && (
+                <button className="boton secundario" onClick={() => setDuplicando(true)}>
+                  <IconoCopiar />
+                  Copiar {frasePosesiva(diaFuente)}
+                </button>
+              )
             )}
           </Vacio>
         ) : (
@@ -175,6 +197,20 @@ export default function Hoy() {
 
       {editando && (
         <AnadirComida fecha={fecha} registro={editando} onCerrar={() => setEditando(null)} />
+      )}
+
+      {duplicando && diaFuente && (
+        <Confirmar
+          titulo="Copiar un día entero"
+          mensaje={`Se añade ${frasePosesiva(diaFuente)} a ${frasePosesiva(fecha).replace(/^lo de[l]? /, '')}, sin borrar lo que ya haya. Los macros se recalculan con las etiquetas de ahora.`}
+          textoOk="Copiar"
+          onOk={async () => {
+            const n = await duplicarDia(diaFuente, fecha)
+            setDuplicando(false)
+            setAviso(n === 1 ? 'Copiada 1 comida.' : `Copiadas ${n} comidas.`)
+          }}
+          onCancelar={() => setDuplicando(false)}
+        />
       )}
 
       {borrando && (

@@ -6,7 +6,7 @@ import { MOMENTOS, NOMBRE_MOMENTO, type Momento, type Producto, type Registro } 
 import { macrosDe } from '../lib/calc'
 import { aNumero, ent, gr, redondear } from '../lib/formato'
 import { Hoja } from './UI'
-import { IconoAdelante } from './Iconos'
+import { IconoAdelante, IconoEstrella, IconoEstrellaLlena } from './Iconos'
 import { buscarProductos } from '../lib/buscar'
 
 /** El momento mas probable segun la hora, para no tener que elegirlo casi nunca. */
@@ -32,11 +32,15 @@ export function AnadirComida({
   registro?: Registro
   onCerrar: () => void
 }) {
-  const productos = useLiveQuery(
-    () => db.productos.orderBy('ultimoUso').reverse().toArray(),
-    [],
-    undefined,
-  )
+  const productos = useLiveQuery(async () => {
+    const todos = await db.productos.toArray()
+    // Favoritos primero, luego por uso reciente: en el dia a dia repites
+    // casi siempre las mismas cosas y quieres tenerlas arriba sin buscar.
+    return todos.sort((a, b) => {
+      if (!!a.favorito !== !!b.favorito) return a.favorito ? -1 : 1
+      return (b.ultimoUso ?? b.creadoEn) - (a.ultimoUso ?? a.creadoEn)
+    })
+  }, [], undefined)
   const [consulta, setConsulta] = useState('')
   const [elegido, setElegido] = useState<Producto | null>(null)
   const [cantidad, setCantidad] = useState('')
@@ -132,7 +136,7 @@ export function AnadirComida({
         ) : (
           <ul className="lista">
             {listados.map((p) => (
-              <li key={p.id}>
+              <li key={p.id} style={{ display: 'flex', alignItems: 'center' }}>
                 <button
                   className="fila-item"
                   onClick={() => {
@@ -148,6 +152,19 @@ export function AnadirComida({
                     </span>
                   </span>
                   <IconoAdelante />
+                </button>
+                <button
+                  className={`borrar ${p.favorito ? 'favorito' : ''}`}
+                  style={{ marginRight: 4 }}
+                  aria-pressed={!!p.favorito}
+                  aria-label={
+                    p.favorito
+                      ? `Quitar ${p.nombre} de favoritos`
+                      : `Marcar ${p.nombre} como favorito`
+                  }
+                  onClick={() => p.id && db.productos.update(p.id, { favorito: !p.favorito })}
+                >
+                  {p.favorito ? <IconoEstrellaLlena /> : <IconoEstrella />}
                 </button>
               </li>
             ))}

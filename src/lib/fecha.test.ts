@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { aISO, desdeISO, etiquetaFecha, hoyISO, sumarDias, ultimosDias } from './fecha'
+import {
+  aISO,
+  desdeISO,
+  etiquetaFecha,
+  frasePosesiva,
+  hoyISO,
+  sumarDias,
+  ultimosDias,
+} from './fecha'
 
 afterEach(() => vi.useRealTimers())
 
@@ -125,5 +133,26 @@ describe('etiquetaFecha', () => {
     reloj('2026-09-09')
     expect(etiquetaFecha('2025-09-05')).toMatch(/2025$/)
     expect(etiquetaFecha('2026-09-05')).not.toMatch(/2026$/)
+  })
+})
+
+describe('frasePosesiva', () => {
+  it('pone "lo de" con los dias sueltos', () => {
+    reloj('2026-09-09')
+    expect(frasePosesiva('2026-09-08')).toBe('lo de ayer')
+    expect(frasePosesiva('2026-09-09')).toBe('lo de hoy')
+  })
+
+  it('pone "lo del" con los dias con nombre', () => {
+    // "lo de el sabado" seria incorrecto: el articulo se contrae.
+    reloj('2026-09-09')
+    expect(frasePosesiva('2026-09-05')).toBe('lo del sábado 5 sep')
+  })
+
+  it('nunca deja "lo de el"', () => {
+    reloj('2026-09-09')
+    for (const d of ['2026-09-01', '2026-08-20', '2025-12-31']) {
+      expect(frasePosesiva(d)).not.toContain('lo de el')
+    }
   })
 })

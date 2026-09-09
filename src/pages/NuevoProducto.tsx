@@ -6,7 +6,7 @@ import { guardarBorrador } from '../lib/borrador'
 import { hayClave } from '../lib/ajustes'
 import { ErrorIA } from '../ai/provider'
 import { Cabecera } from '../components/UI'
-import { IconoCamara, IconoLapiz } from '../components/Iconos'
+import { IconoCamara, IconoLapiz, IconoPlato } from '../components/Iconos'
 
 type Estado = 'elegir' | 'preparando' | 'leyendo'
 
@@ -98,6 +98,11 @@ export default function NuevoProducto() {
             <Link className="boton secundario ancho" to="/alimentos/revisar" style={{ minHeight: 64 }}>
               <IconoLapiz />
               Meterlo a mano
+            </Link>
+
+            <Link className="boton secundario ancho" to="/platos/nuevo" style={{ minHeight: 64 }}>
+              <IconoPlato />
+              Plato de varios alimentos
             </Link>
           </div>
 

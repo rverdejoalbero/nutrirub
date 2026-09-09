@@ -35,3 +35,15 @@ export function etiquetaFecha(iso: string): string {
   const texto = base.charAt(0).toUpperCase() + base.slice(1)
   return d.getFullYear() === new Date().getFullYear() ? texto : `${texto} ${d.getFullYear()}`
 }
+
+/**
+ * La misma fecha en una frase que se pueda encajar detras de "copiar".
+ * "Ayer" necesita "lo de ayer", pero un dia con nombre necesita "lo del
+ * sabado 5 sep": el articulo cambia, asi que lo decide esta funcion y no
+ * la plantilla que la usa.
+ */
+export function frasePosesiva(iso: string): string {
+  const e = etiquetaFecha(iso)
+  const suelto = ['Hoy', 'Ayer', 'Mañana']
+  return suelto.includes(e) ? `lo de ${e.toLowerCase()}` : `lo del ${e.toLowerCase()}`
+}

@@ -414,6 +414,17 @@ main {
   color: var(--grasas);
 }
 
+/* La estrella marcada usa el color de proteina, que ya es el "dorado" de la
+   paleta: no hace falta meter un color nuevo solo para esto. */
+.borrar.favorito {
+  color: var(--proteina);
+}
+
+.borrar.favorito:active {
+  color: var(--proteina);
+  opacity: 0.6;
+}
+
 /* --------------------------------------------------------------- vacios */
 
 .vacio {
