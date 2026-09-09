@@ -26,7 +26,10 @@ como se sirve en Pages).
 | `npm test` | La batería de tests (155) |
 | `npm run test:watch` | Tests en vigilancia mientras editas |
 | `npm run typecheck` | Solo TypeScript, sin construir |
-| `npm run build` | Construye a `dist/` |
+| `npm run build` | Construye a `dist/` y comprueba el precacheo |
+| `npm run comprobar` | Typecheck + tests + contraste, todo de una |
+| `npm run comprobar:contraste` | Audita la paleta contra la WCAG AA |
+| `npm run comprobar:offline` | Verifica que el precacheo cubre todo `dist/` |
 
 ## Publicar en GitHub Pages
 
@@ -66,7 +69,8 @@ por favoritos y por platos.
 **Alta de un producto**, por tres vías: foto de la etiqueta, a mano, o como plato de varios
 alimentos. Las tres acaban en la misma pantalla de revisión.
 
-**Datos.** Calorías por día a 7 y 30 vistas, reparto medio de macros y lo que más repites.
+**Datos.** Calorías por día a 7 y 30 vistas, reparto medio de macros, medias de fibra, azúcares
+y sal, y lo que más repites.
 
 **Asistente.** Chat que recibe como contexto el resumen del día antes de cada respuesta.
 
@@ -120,6 +124,27 @@ sin hacer una.
 - Las kcal se contrastan contra `4·P + 4·H + 9·G + 2·fibra`. Más de un 15 % de desviación
   levanta un aviso. Es la forma más barata de cazar un OCR mal leído.
 
+## Que siga funcionando sin conexión
+
+Es un requisito, no una aspiración: la app tiene que abrir y dejar registrar comidas en el súper
+sin cobertura. Eso solo se cumple si **todo** lo que se construye está en el manifiesto de
+precacheo del service worker, incluida la fuente —si viniera de la red, el número grande de kcal
+no se vería—. `npm run build` lo comprueba y falla si algún fichero se queda fuera, así que
+añadir un tipo de asset nuevo sin meterlo en `globPatterns` no puede pasar desapercibido.
+
+Para comprobarlo tú de verdad: instálala en el iPhone, pon el modo avión y ábrela. Debe arrancar
+y dejarte registrar. Solo la lectura de etiquetas y el asistente necesitan red.
+
+## Contraste
+
+`npm run comprobar:contraste` mide la paleta contra la WCAG 2.1 AA leyendo los tokens del CSS
+real, y corre en CI. Importa más de lo normal porque esta app se consulta de noche y de un
+vistazo.
+
+Por eso hay dos tokens de borde y no uno: `--borde` dibuja las líneas finas entre filas, que
+pueden ser tenues porque son decorativas, y `--borde-control` dibuja el límite de los campos,
+chips y botones, que necesita 3:1 para que se vea dónde está el control.
+
 ## Los tests
 
 `npm test`. Cubren lo que puede corromper datos en silencio sin que se note hasta semanas
@@ -140,6 +165,7 @@ src/
   components/  piezas compartidas
   pages/       las pantallas
   pruebas/     preparación del entorno de test
+scripts/       comprobaciones de precacheo y contraste
 ```
 
 ## Stack
