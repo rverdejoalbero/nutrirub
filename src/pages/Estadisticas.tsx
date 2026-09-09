@@ -4,6 +4,12 @@ import { db, objetivosEn } from '../db/db'
 import { ent, gr } from '../lib/formato'
 import { desdeISO, ultimosDias } from '../lib/fecha'
 import { Vacio } from '../components/UI'
+import {
+  NOMBRE_NUTRIENTE,
+  OTROS_NUTRIENTES,
+  cobertura,
+  mediasDeNutrientes,
+} from '../lib/estadisticas'
 import type { Registro } from '../db/types'
 
 const DIAS_SEMANA = ['D', 'L', 'M', 'X', 'J', 'V', 'S']
@@ -176,6 +182,13 @@ export default function Estadisticas() {
     }
   }, [registros, diasConDatos])
 
+  // Fibra, azucares y sal se congelan en cada registro pero no salen en Hoy,
+  // que se queda con las kcal y los tres macros. Aqui si tienen sitio.
+  const otros = useMemo(
+    () => mediasDeNutrientes(registros ?? [], diasConDatos),
+    [registros, diasConDatos],
+  )
+
   const masUsados = useMemo(() => {
     const cuenta = new Map<string, { n: number; kcal: number }>()
     for (const r of registros ?? []) {
@@ -234,6 +247,40 @@ export default function Estadisticas() {
                 <h2>Reparto medio</h2>
                 {medias && <RepartoMacros p={medias.p} c={medias.c} g={medias.g} />}
               </div>
+
+              {OTROS_NUTRIENTES.some((k) => otros[k].declarados > 0) && (
+                <div className="seccion">
+                  <h2>Fibra, azúcares y sal</h2>
+                  <ul className="lista" style={{ borderTop: 'none' }}>
+                    {OTROS_NUTRIENTES.filter((k) => otros[k].declarados > 0).map((k) => {
+                      const r = otros[k]
+                      const cob = cobertura(r)
+                      return (
+                        <li key={k}>
+                          <div className="fila-item" style={{ padding: '10px 0', minHeight: 44 }}>
+                            <span className="texto">
+                              <span className="titulo">{NOMBRE_NUTRIENTE[k]}</span>
+                              {cob < 0.95 && (
+                                <span className="sub">
+                                  Solo {r.declarados} de {r.total} registros lo declaran
+                                </span>
+                              )}
+                            </span>
+                            <span className="derecha">
+                              <span className="kcal cifra">{gr(r.media)}</span>
+                              <span className="u">g/día</span>
+                            </span>
+                          </div>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  <p className="nota" style={{ marginTop: 10 }}>
+                    Lo que no venía en la etiqueta no cuenta como cero: sencillamente no suma, así
+                    que estas cifras se quedan cortas si tienes productos sin estos datos.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="contenido">
