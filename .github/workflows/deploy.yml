@@ -28,6 +28,10 @@ jobs:
 
       - run: npm ci
 
+      # Si los tests fallan, no se publica. Mas vale quedarse con la version
+      # anterior que subir una que calcula mal los macros.
+      - run: npm test
+
       # El base de Vite sale del nombre del repo, asi que renombrarlo no rompe
       # las rutas ni obliga a tocar vite.config.ts.
       - name: Calcular base

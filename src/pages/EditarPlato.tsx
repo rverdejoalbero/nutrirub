@@ -7,7 +7,7 @@ import { buscarProductos } from '../lib/buscar'
 import { aNumero, ent, gr } from '../lib/formato'
 import { componer, pesoCrudo, valoresDelPlato, type IngredienteResuelto } from '../lib/receta'
 import { revisarCoherencia } from '../lib/calc'
-import { Cabecera, Cargando, Confirmar, Hoja } from '../components/UI'
+import { Cabecera, Cargando, Confirmar, Hoja, Vacio } from '../components/UI'
 import { IconoAdelante, IconoCerrar, IconoMas } from '../components/Iconos'
 
 export default function EditarPlato() {
@@ -33,14 +33,24 @@ export default function EditarPlato() {
   const [borrando, setBorrando] = useState(false)
   const [tocado, setTocado] = useState(false)
 
-  // Cargar el plato al editar
+  // Cargar el plato al editar.
+  // El efecto depende del id ademas del plato porque el router reutiliza este
+  // componente al pasar de /platos/4 a /platos/9: sin limpiar, el formulario
+  // se quedaria con el plato anterior escrito dentro.
   useEffect(() => {
-    if (!existente) return
+    if (existente === undefined) return
+    if (existente === null) {
+      setNombre('')
+      setIngredientes([])
+      setPesoFinal('')
+      setTocoPeso(false)
+      return
+    }
     setNombre(existente.nombre)
     setIngredientes(existente.ingredientes ?? [])
     setPesoFinal(String(existente.pesoFinal ?? '').replace('.', ','))
     setTocoPeso(true)
-  }, [existente])
+  }, [existente, idNum])
 
   const crudo = pesoCrudo(ingredientes)
 
@@ -114,6 +124,19 @@ export default function EditarPlato() {
   }
 
   if (editando && existente === undefined) return <Cargando />
+
+  // Un plato que ya no existe: mejor decirlo que dejar el formulario del
+  // anterior a medio rellenar invitando a guardar un duplicado.
+  if (editando && existente === null) {
+    return (
+      <>
+        <Cabecera titulo="Plato" onAtras={() => nav('/alimentos')} />
+        <main>
+          <Vacio texto="Este plato ya no existe." />
+        </main>
+      </>
+    )
+  }
 
   return (
     <>
