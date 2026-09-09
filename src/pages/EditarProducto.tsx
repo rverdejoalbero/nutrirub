@@ -13,8 +13,10 @@ export default function EditarProducto() {
   const { id } = useParams()
   const nav = useNavigate()
   const idNum = Number(id)
+  // null = no existe, undefined = todavia cargando. Sin distinguirlos, un id
+  // que no esta se queda girando para siempre.
   const producto = useLiveQuery(
-    () => (isFinite(idNum) ? db.productos.get(idNum) : undefined),
+    async () => (isFinite(idNum) ? ((await db.productos.get(idNum)) ?? null) : null),
     [idNum],
     undefined,
   )
@@ -39,7 +41,7 @@ export default function EditarProducto() {
     return () => URL.revokeObjectURL(u)
   }, [producto])
 
-  const inicial = useMemo(() => valoresDesdeProducto(producto), [producto])
+  const inicial = useMemo(() => valoresDesdeProducto(producto ?? undefined), [producto])
 
   async function guardar(datos: DatosProducto) {
     if (!producto?.id) return
@@ -50,7 +52,7 @@ export default function EditarProducto() {
   }
 
   if (producto === undefined) return <Cargando />
-  if (producto === null || !producto) {
+  if (producto === null) {
     return (
       <>
         <Cabecera titulo="Alimento" onAtras={() => nav('/alimentos')} />
