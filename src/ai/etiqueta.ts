@@ -66,7 +66,10 @@ export function parsearEtiqueta(crudo: string): EtiquetaLeida {
       'La respuesta del modelo no se ha entendido. Prueba otra vez o mete los datos a mano.',
     )
   }
-  if (!j || typeof j !== 'object') throw new ErrorIA('La respuesta del modelo no es válida.')
+  // Un array tambien es typeof 'object': sin descartarlo, una respuesta como
+  // [1,2,3] se colaria y saldria un "Producto sin nombre" con todo a null.
+  if (!j || typeof j !== 'object' || Array.isArray(j))
+    throw new ErrorIA('La respuesta del modelo no es válida.')
 
   const p = (j.por_100 ?? {}) as Record<string, unknown>
   const unidad = String(j.unidad_base ?? 'g').toLowerCase() === 'ml' ? 'ml' : 'g'

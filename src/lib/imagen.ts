@@ -66,18 +66,21 @@ export async function prepararImagen(file: Blob, ladoMax = LADO_MAX): Promise<Im
   return { blob, base64: await aBase64(blob), mime: 'image/jpeg', ancho, alto }
 }
 
-/** Solo la carga util, sin el prefijo data:...;base64, */
-export function aBase64(blob: Blob): Promise<string> {
-  return new Promise((ok, fallo) => {
-    const fr = new FileReader()
-    fr.onload = () => {
-      const s = String(fr.result)
-      const i = s.indexOf(',')
-      ok(i >= 0 ? s.slice(i + 1) : s)
-    }
-    fr.onerror = () => fallo(new Error('no se pudo leer el fichero'))
-    fr.readAsDataURL(blob)
-  })
+/**
+ * Solo la carga util, sin el prefijo data:...;base64,
+ * Con arrayBuffer en vez de FileReader: la API moderna funciona igual en el
+ * navegador y en Node, asi que la exportacion se puede probar sin navegador.
+ */
+export async function aBase64(blob: Blob): Promise<string> {
+  const bytes = new Uint8Array(await blob.arrayBuffer())
+  // Por trozos: String.fromCharCode con cientos de miles de argumentos
+  // desborda la pila, y una foto de etiqueta pasa de largo ese limite.
+  const TROZO = 0x8000
+  let binario = ''
+  for (let i = 0; i < bytes.length; i += TROZO) {
+    binario += String.fromCharCode(...bytes.subarray(i, i + TROZO))
+  }
+  return btoa(binario)
 }
 
 export function deBase64(base64: string, mime = 'image/jpeg'): Blob {
