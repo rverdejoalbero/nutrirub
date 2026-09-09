@@ -32,6 +32,10 @@ jobs:
       # anterior que subir una que calcula mal los macros.
       - run: npm test
 
+      # El contraste es un requisito, no una opinion: si un color se retoca y
+      # deja de ser legible, se entera aqui y no tres semanas despues.
+      - run: npm run comprobar:contraste
+
       # El base de Vite sale del nombre del repo, asi que renombrarlo no rompe
       # las rutas ni obliga a tocar vite.config.ts.
       - name: Calcular base

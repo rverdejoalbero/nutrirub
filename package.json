@@ -5,11 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/comprobar-precacheo.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "comprobar:offline": "node scripts/comprobar-precacheo.mjs",
+    "comprobar:contraste": "node scripts/comprobar-contraste.mjs",
+    "comprobar": "npm run typecheck && npm test && npm run comprobar:contraste"
   },
   "dependencies": {
     "dexie": "^4.0.10",
