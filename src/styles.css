@@ -1,0 +1,893 @@
+/* Archivo variable: un solo fichero da el ancho Expanded y todos los pesos.
+   Autoalojado a proposito: si viniera de Google Fonts, el numero grande de
+   kcal -la pieza que sostiene el diseno- no se veria sin conexion. */
+@font-face {
+  font-family: 'Archivo';
+  src: url('/fonts/archivo-var-latin.woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-style: normal;
+  font-display: block;
+}
+
+:root {
+  --fondo: #10120f;
+  --superficie: #1b1e19;
+  --borde: #2c302a;
+  --texto: #edefe8;
+  --apagado: #8b9083;
+  --proteina: #e4b363;
+  --carbos: #7fa95a;
+  --grasas: #c4635a;
+  --alerta: #d98c4a;
+
+  --barra-inf: 60px;
+  --seguro-inf: env(safe-area-inset-bottom, 0px);
+  --seguro-sup: env(safe-area-inset-top, 0px);
+  --radio: 10px;
+  --toque: 44px;
+
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  /* En iOS evita el rebote de la pagina entera y el zoom por doble toque. */
+  overscroll-behavior-y: none;
+  touch-action: manipulation;
+}
+
+/* Todo lo que sea cifra con numerales tabulares: al actualizarse no baila. */
+.cifra,
+input[type='number'],
+input[inputmode='decimal'],
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+a {
+  color: var(--texto);
+}
+
+:focus-visible {
+  outline: 2px solid var(--proteina);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Todos los iconos comparten caja y trazo. Sin esto un <svg> sin width
+   se pinta a 300x150, que es el tamano por defecto de un elemento remplazado. */
+svg[aria-hidden='true'] {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.borrar svg {
+  width: 18px;
+  height: 18px;
+}
+
+.flotante svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 2.2;
+}
+
+.fila-item > svg {
+  color: var(--apagado);
+  opacity: 0.55;
+}
+
+/* ------------------------------------------------------------- estructura */
+
+.app {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.cabecera {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: calc(var(--seguro-sup) + 12px) 16px 10px;
+  background: var(--fondo);
+  border-bottom: 1px solid var(--borde);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: calc(var(--seguro-sup) + 52px);
+}
+
+.cabecera h1 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  flex: 1;
+  min-width: 0;
+}
+
+.cabecera .accion {
+  min-width: var(--toque);
+  min-height: var(--toque);
+  display: grid;
+  place-items: center;
+  margin: -8px;
+  color: var(--apagado);
+}
+
+.cabecera .accion:hover {
+  color: var(--texto);
+}
+
+main {
+  flex: 1;
+  padding-bottom: calc(var(--barra-inf) + var(--seguro-inf) + 24px);
+}
+
+.contenido {
+  padding: 0 16px;
+}
+
+/* --------------------------------------------------------- navegacion inf */
+
+.nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: color-mix(in srgb, var(--fondo) 92%, transparent);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--borde);
+  padding-bottom: var(--seguro-inf);
+}
+
+.nav a {
+  min-height: var(--barra-inf);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  text-decoration: none;
+  color: var(--apagado);
+  font-size: 0.66rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.nav a.activo {
+  color: var(--texto);
+}
+
+.nav svg {
+  width: 21px;
+  height: 21px;
+  stroke-width: 1.6;
+}
+
+/* -------------------------------------------------------- el numero grande */
+
+.resumen {
+  padding: 22px 16px 18px;
+}
+
+.resumen .etiqueta {
+  color: var(--apagado);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-weight: 600;
+}
+
+/* Aqui es donde se gasta la audacia: ancho completo, Archivo Expanded en peso
+   alto, y cambia de color al pasarse del objetivo. */
+.restante {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 2px 0 4px;
+}
+
+.restante .valor {
+  font-stretch: 125%;
+  font-weight: 700;
+  font-size: clamp(3.6rem, 21vw, 5.6rem);
+  line-height: 0.92;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.restante .unidad {
+  color: var(--apagado);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.restante.pasado .valor {
+  color: var(--grasas);
+}
+
+.resumen .pie {
+  color: var(--apagado);
+  font-size: 0.84rem;
+}
+
+/* ------------------------------------------------------------ barras macro */
+
+.barras {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.barra .fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.8rem;
+  margin-bottom: 5px;
+}
+
+.barra .nombre {
+  color: var(--apagado);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-weight: 600;
+  font-size: 0.68rem;
+}
+
+.barra .cifras {
+  font-variant-numeric: tabular-nums;
+  color: var(--texto);
+  font-size: 0.82rem;
+}
+
+.barra .cifras .obj {
+  color: var(--apagado);
+}
+
+.barra .canal {
+  height: 4px;
+  background: var(--borde);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.barra .relleno {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.32s cubic-bezier(0.22, 0.7, 0.3, 1);
+}
+
+.barra.proteinas .relleno {
+  background: var(--proteina);
+}
+.barra.carbohidratos .relleno {
+  background: var(--carbos);
+}
+.barra.grasas .relleno {
+  background: var(--grasas);
+}
+
+.barra.excedido .relleno {
+  /* al pasarse, rayado diagonal en vez de otro color: el color ya identifica
+     al nutriente y no puede significar dos cosas */
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(16, 18, 15, 0.45) 0 3px,
+    transparent 3px 6px
+  );
+}
+
+/* -------------------------------------------------------------- listas */
+
+.grupo-titulo {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 20px 16px 6px;
+  color: var(--apagado);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-weight: 700;
+}
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--borde);
+}
+
+.lista > li {
+  border-bottom: 1px solid var(--borde);
+}
+
+.fila-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 16px;
+  text-align: left;
+  background: none;
+}
+
+.fila-item:active {
+  background: var(--superficie);
+}
+
+.fila-item .texto {
+  flex: 1;
+  min-width: 0;
+}
+
+.fila-item .titulo {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.97rem;
+}
+
+.fila-item .sub {
+  display: block;
+  color: var(--apagado);
+  font-size: 0.79rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.fila-item .derecha {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fila-item .derecha .kcal {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.fila-item .derecha .u {
+  color: var(--apagado);
+  font-size: 0.72rem;
+  margin-left: 2px;
+}
+
+.borrar {
+  min-width: var(--toque);
+  min-height: var(--toque);
+  display: grid;
+  place-items: center;
+  color: var(--apagado);
+  flex: none;
+}
+
+.borrar:active {
+  color: var(--grasas);
+}
+
+/* --------------------------------------------------------------- vacios */
+
+.vacio {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--apagado);
+}
+
+.vacio p {
+  margin: 0 0 14px;
+}
+
+/* -------------------------------------------------------------- botones */
+
+.boton,
+.flotante {
+  text-decoration: none;
+}
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--toque);
+  padding: 0 18px;
+  border-radius: var(--radio);
+  background: var(--texto);
+  color: var(--fondo);
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: 1px solid transparent;
+}
+
+.boton:disabled {
+  opacity: 0.45;
+}
+
+.boton.secundario {
+  background: none;
+  color: var(--texto);
+  border-color: var(--borde);
+}
+
+.boton.peligro {
+  background: none;
+  color: var(--grasas);
+  border-color: var(--grasas);
+}
+
+.boton.ancho {
+  width: 100%;
+}
+
+/* Boton flotante de anadir comida */
+.flotante {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: calc(var(--barra-inf) + var(--seguro-inf) + 16px);
+  z-index: 25;
+  height: 52px;
+  padding: 0 20px;
+  border-radius: 26px;
+  background: var(--texto);
+  color: var(--fondo);
+  font-weight: 700;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+
+.flotante:active {
+  transform: translateY(1px);
+}
+
+/* --------------------------------------------------------------- campos */
+
+.campo {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.campo > span {
+  display: block;
+  color: var(--apagado);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+input[type='text'],
+input[type='number'],
+input[type='password'],
+input[type='date'],
+input[type='search'],
+select,
+textarea {
+  width: 100%;
+  min-height: var(--toque);
+  padding: 10px 12px;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  color: var(--texto);
+  /* 16px o iOS hace zoom al enfocar el campo */
+  font-size: 16px;
+  font-family: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+select {
+  background-image: linear-gradient(45deg, transparent 50%, var(--apagado) 50%),
+    linear-gradient(135deg, var(--apagado) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 13px) 50%;
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 34px;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--apagado);
+  opacity: 0.7;
+}
+
+.campo.aviso input {
+  border-color: var(--alerta);
+}
+
+.texto-aviso {
+  display: flex;
+  gap: 7px;
+  color: var(--alerta);
+  font-size: 0.82rem;
+  margin-top: 6px;
+  line-height: 1.35;
+}
+
+.rejilla-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 12px;
+}
+
+/* ---------------------------------------------------------------- hojas */
+
+.velo {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: aparecer 0.16s ease-out;
+}
+
+.hoja {
+  width: 100%;
+  max-width: 620px;
+  max-height: 92dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  background: var(--fondo);
+  border-top: 1px solid var(--borde);
+  border-radius: 16px 16px 0 0;
+  padding: 8px 16px calc(20px + var(--seguro-inf));
+  animation: subir 0.24s cubic-bezier(0.22, 0.7, 0.3, 1);
+}
+
+.hoja .asa {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--borde);
+  margin: 4px auto 14px;
+}
+
+.hoja h2 {
+  font-size: 1.1rem;
+  margin-bottom: 14px;
+}
+
+@keyframes subir {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+  }
+}
+
+/* --------------------------------------------------------------- varios */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.chip {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 19px;
+  border: 1px solid var(--borde);
+  color: var(--apagado);
+  font-size: 0.87rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.chip.activo {
+  border-color: var(--texto);
+  color: var(--texto);
+}
+
+.previo {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 0;
+  border-top: 1px solid var(--borde);
+  border-bottom: 1px solid var(--borde);
+  margin: 4px 0 18px;
+}
+
+.previo div {
+  text-align: center;
+  flex: 1;
+}
+
+.previo .v {
+  display: block;
+  font-size: 1.24rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+.previo .n {
+  display: block;
+  color: var(--apagado);
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-weight: 700;
+}
+
+.previo .p .v {
+  color: var(--proteina);
+}
+.previo .c .v {
+  color: var(--carbos);
+}
+.previo .g .v {
+  color: var(--grasas);
+}
+
+.nota {
+  color: var(--apagado);
+  font-size: 0.83rem;
+  line-height: 1.45;
+}
+
+.error {
+  color: var(--grasas);
+  font-size: 0.87rem;
+  line-height: 1.45;
+  margin: 10px 0;
+}
+
+.aviso-caja {
+  border: 1px solid var(--alerta);
+  border-radius: var(--radio);
+  padding: 12px 14px;
+  color: var(--alerta);
+  font-size: 0.87rem;
+  line-height: 1.45;
+  margin-bottom: 16px;
+}
+
+.aviso-caja a {
+  color: inherit;
+  font-weight: 700;
+}
+
+.seccion {
+  padding: 22px 0 4px;
+}
+
+.seccion > h2 {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--apagado);
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.navegador-dia {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.navegador-dia .flecha {
+  min-width: var(--toque);
+  min-height: var(--toque);
+  display: grid;
+  place-items: center;
+  color: var(--apagado);
+}
+
+.navegador-dia .flecha:disabled {
+  opacity: 0.3;
+}
+
+.navegador-dia .dia {
+  flex: 1;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.97rem;
+  position: relative;
+  min-height: var(--toque);
+  display: grid;
+  place-items: center;
+}
+
+.navegador-dia .dia input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  min-height: 0;
+}
+
+.cargando {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: girar 0.7s linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.foto-etiqueta {
+  width: 100%;
+  border-radius: var(--radio);
+  border: 1px solid var(--borde);
+  margin-bottom: 16px;
+  display: block;
+}
+
+/* ---------------------------------------------------------------- chat */
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.burbuja {
+  max-width: 84%;
+  padding: 10px 13px;
+  border-radius: 14px;
+  font-size: 0.94rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.burbuja.mia {
+  align-self: flex-end;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-bottom-right-radius: 4px;
+}
+
+.burbuja.suya {
+  align-self: flex-start;
+  border: 1px solid var(--borde);
+  border-bottom-left-radius: 4px;
+}
+
+.barra-chat {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--barra-inf) + var(--seguro-inf));
+  z-index: 24;
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--fondo);
+  border-top: 1px solid var(--borde);
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.barra-chat input {
+  flex: 1;
+}
+
+/* --------------------------------------------------------------- grafica */
+
+.grafica {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.grafica .eje {
+  stroke: var(--borde);
+  stroke-width: 1;
+}
+
+.grafica .objetivo {
+  stroke: var(--apagado);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.grafica text {
+  fill: var(--apagado);
+  font-size: 9px;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.desplaza-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
