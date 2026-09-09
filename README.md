@@ -23,7 +23,7 @@ como se sirve en Pages).
 | Comando | Qué hace |
 |---|---|
 | `npm run dev` | Servidor de desarrollo |
-| `npm test` | La batería de tests (155) |
+| `npm test` | La batería de tests (165) |
 | `npm run test:watch` | Tests en vigilancia mientras editas |
 | `npm run typecheck` | Solo TypeScript, sin construir |
 | `npm run build` | Construye a `dist/` y comprueba el precacheo |
@@ -113,7 +113,7 @@ sin hacer una.
 - **Los macros del diario van congelados.** Un `Registro` guarda sus propias kcal y gramos, no
   una referencia al producto. Si mañana corriges la etiqueta de los macarrones porque la IA
   leyó mal un número, la semana pasada no cambia. Por eso se congelan también fibra, azúcares y
-  sal aunque hoy no se muestren: son datos que después no se pueden reconstruir.
+  sal: son datos que después no se podrían reconstruir, y por eso existen las medias de Datos.
 - **Duplicar un día es la excepción, y a propósito.** Ahí sí se recalcula con la etiqueta
   actual, porque el apunte de hoy es *nuevo*: debe reflejar lo mejor que sabemos hoy.
 - **Los objetivos llevan histórico.** Cambiarlos no reescribe los días pasados; cada día se
