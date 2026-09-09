@@ -41,6 +41,13 @@ export default function EditarProducto() {
     return () => URL.revokeObjectURL(u)
   }, [producto])
 
+  // Un plato compuesto tiene su propia pantalla, que sabe de ingredientes y de
+  // peso final. Este formulario le dejaria los macros sin relacion con lo que
+  // dice que lleva, asi que lo mandamos donde corresponde.
+  useEffect(() => {
+    if (producto?.origen === 'receta') nav(`/platos/${producto.id}`, { replace: true })
+  }, [producto, nav])
+
   const inicial = useMemo(() => valoresDesdeProducto(producto ?? undefined), [producto])
 
   async function guardar(datos: DatosProducto) {

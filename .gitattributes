@@ -1,0 +1,8 @@
+# Normaliza los finales de linea: el repo guarda LF y cada quien recibe los
+# suyos al hacer checkout. Sin esto, git avisa en cada commit desde Windows.
+* text=auto eol=lf
+
+# Binarios: que git no los toque
+*.png binary
+*.jpg binary
+*.woff2 binary

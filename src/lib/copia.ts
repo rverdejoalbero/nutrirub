@@ -173,6 +173,21 @@ export async function importar(
       nuevosProductos++
     }
 
+    // Los platos compuestos guardan ids de ingredientes, que tambien se han
+    // movido. Sin este paso, tras fusionar una copia un plato apuntaria a
+    // productos equivocados y sus macros dejarian de tener nada que ver.
+    for (const nuevoId of mapa.values()) {
+      const p = await db.productos.get(nuevoId)
+      if (!p?.ingredientes?.length) continue
+      const remapeados = p.ingredientes.map((i) => ({
+        ...i,
+        productoId: mapa.get(i.productoId) ?? i.productoId,
+      }))
+      if (remapeados.some((i, k) => i.productoId !== p.ingredientes![k].productoId)) {
+        await db.productos.update(nuevoId, { ingredientes: remapeados })
+      }
+    }
+
     const yaRegistrados = new Set(
       (await db.registros.toArray()).map((r) => `${r.fecha}|${r.momento}|${r.nombreProducto}|${r.cantidad}|${r.creadoEn}`),
     )

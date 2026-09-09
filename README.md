@@ -20,6 +20,14 @@ npm run dev
 Se abre en `http://localhost:5173/nutrirub/` (la ruta lleva el nombre del repo porque así es
 como se sirve en Pages).
 
+| Comando | Qué hace |
+|---|---|
+| `npm run dev` | Servidor de desarrollo |
+| `npm test` | La batería de tests (155) |
+| `npm run test:watch` | Tests en vigilancia mientras editas |
+| `npm run typecheck` | Solo TypeScript, sin construir |
+| `npm run build` | Construye a `dist/` |
+
 ## Publicar en GitHub Pages
 
 1. Sube el repo a GitHub. Puede ser público: **la clave de la API no está aquí dentro.**
@@ -47,6 +55,35 @@ ahora mismo, porque los identificadores de los modelos cambian cada pocos meses.
 Conviene restringir la clave por dominio desde el panel del proveedor: aunque el repo esté
 limpio, la clave vive en un navegador.
 
+## Qué hay dentro
+
+**Hoy.** Las kcal que quedan como número dominante, las tres barras de macro y el diario del día
+agrupado por momento. Botón para copiar un día entero desde el último día con registros.
+
+**Alimentos.** La biblioteca, con búsqueda sin tildes, favoritos (que ordenan primero) y filtros
+por favoritos y por platos.
+
+**Alta de un producto**, por tres vías: foto de la etiqueta, a mano, o como plato de varios
+alimentos. Las tres acaban en la misma pantalla de revisión.
+
+**Datos.** Calorías por día a 7 y 30 vistas, reparto medio de macros y lo que más repites.
+
+**Asistente.** Chat que recibe como contexto el resumen del día antes de cada respuesta.
+
+**Ajustes.** Clave y modelo, objetivos, exportar/importar y borrar todo.
+
+### Platos compuestos
+
+Un plato se guarda como **un producto más**, con sus valores ya calculados por 100 g, y además
+recuerda sus ingredientes y su peso final para poder reeditarlo. Así el buscador, el registro
+por gramos, las porciones rápidas y las estadísticas funcionan sin enterarse de que es una
+receta.
+
+El **peso del plato terminado** es lo que hace que el cálculo sea correcto y no una
+aproximación: 100 g de macarrones crudos pesan unos 230 cocidos, así que dividir por la suma de
+los ingredientes daría un plato casi el doble de calórico. La pantalla sugiere el peso crudo y
+deja de seguirlo en cuanto escribes el peso real de la olla.
+
 ## Copias de seguridad
 
 **No hay servidor. La exportación a JSON es el único respaldo que existe.**
@@ -73,11 +110,25 @@ sin hacer una.
   una referencia al producto. Si mañana corriges la etiqueta de los macarrones porque la IA
   leyó mal un número, la semana pasada no cambia. Por eso se congelan también fibra, azúcares y
   sal aunque hoy no se muestren: son datos que después no se pueden reconstruir.
+- **Duplicar un día es la excepción, y a propósito.** Ahí sí se recalcula con la etiqueta
+  actual, porque el apunte de hoy es *nuevo*: debe reflejar lo mejor que sabemos hoy.
 - **Los objetivos llevan histórico.** Cambiarlos no reescribe los días pasados; cada día se
   compara con el objetivo que estaba vigente entonces.
 - **Nada extraído por IA se guarda sin pasar por la pantalla de revisión.**
+- **No se inventa un cero.** Si ninguna etiqueta declaraba la fibra, el producto no declara
+  fibra: un 0 diría «no tiene» cuando lo cierto es «no lo sabemos».
 - Las kcal se contrastan contra `4·P + 4·H + 9·G + 2·fibra`. Más de un 15 % de desviación
   levanta un aviso. Es la forma más barata de cazar un OCR mal leído.
+
+## Los tests
+
+`npm test`. Cubren lo que puede corromper datos en silencio sin que se note hasta semanas
+después: el escalado por 100 g y la comprobación de coherencia, el parseo de las respuestas del
+modelo (JSON envuelto en markdown, comas decimales, nulos que no son ceros), las fechas locales
+con sus cambios de mes, año, bisiesto y horario, la composición de platos, la duplicación de
+días y —sobre todo— la exportación y reimportación comparando registro a registro.
+
+Los de base de datos corren contra `fake-indexeddb`, así que no hace falta navegador.
 
 ## Estructura
 
@@ -85,13 +136,14 @@ sin hacer una.
 src/
   ai/          adaptador de proveedor (Gemini / OpenRouter), prompts, parseo de la etiqueta
   db/          esquema Dexie y tipos
-  lib/         cálculo de macros, fechas, imagen, copias, ajustes
+  lib/         cálculo de macros, recetas, diario, fechas, imagen, copias, ajustes
   components/  piezas compartidas
-  pages/       las cinco pantallas
+  pages/       las pantallas
+  pruebas/     preparación del entorno de test
 ```
 
 ## Stack
 
 React + Vite + TypeScript, `HashRouter` (Pages no reescribe rutas), Dexie sobre IndexedDB,
-`vite-plugin-pwa`, CSS plano con variables. Las gráficas son SVG a mano: son treinta valores y
-una línea, y una librería de gráficas pesaría más que toda la app.
+`vite-plugin-pwa`, CSS plano con variables, Vitest. Las gráficas son SVG a mano: son treinta
+valores y una línea, y una librería de gráficas pesaría más que toda la app.

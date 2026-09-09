@@ -274,3 +274,78 @@ describe('objetivos con historico', () => {
     expect((await db.objetivos.toArray())[0].kcal).toBe(2500)
   })
 })
+
+describe('platos compuestos en la copia', () => {
+  /** Un plato de 200 g de macarrones sobre 560 g de peso final. */
+  async function sembrarPlato() {
+    const idM = await db.productos.add(producto('Macarrones', { marca: 'Gallo' }))
+    const idT = await db.productos.add(producto('Tomate frito', { kcal: 82 }))
+    await db.productos.add(
+      producto('Macarrones con tomate', {
+        origen: 'receta',
+        kcal: 142.86,
+        pesoFinal: 560,
+        ingredientes: [
+          { productoId: idM, nombre: 'Macarrones', cantidad: 200, unidad: 'g' },
+          { productoId: idT, nombre: 'Tomate frito', cantidad: 100, unidad: 'g' },
+        ],
+      }),
+    )
+    return { idM, idT }
+  }
+
+  it('el plato viaja entero en la exportacion', async () => {
+    await sembrarPlato()
+    const texto = JSON.stringify(await construirCopia(false))
+    await borrarTodo()
+    await importar(texto, 'reemplazar')
+
+    const plato = (await db.productos.toArray()).find((p) => p.origen === 'receta')!
+    expect(plato.pesoFinal).toBe(560)
+    expect(plato.ingredientes).toHaveLength(2)
+    expect(plato.ingredientes![0].cantidad).toBe(200)
+  })
+
+  it('al reemplazar, los ingredientes siguen apuntando a su producto', async () => {
+    await sembrarPlato()
+    const texto = JSON.stringify(await construirCopia(false))
+    await borrarTodo()
+    await importar(texto, 'reemplazar')
+
+    const plato = (await db.productos.toArray()).find((p) => p.origen === 'receta')!
+    for (const i of plato.ingredientes!) {
+      expect((await db.productos.get(i.productoId))?.nombre).toBe(i.nombre)
+    }
+  })
+
+  it('al fusionar, los ids de los ingredientes se remapean', async () => {
+    // Sin remapear, el plato acabaria apuntando a productos ajenos: sus macros
+    // dejarian de tener nada que ver con lo que dice que lleva.
+    await sembrarPlato()
+    const texto = JSON.stringify(await construirCopia(false))
+    await borrarTodo()
+    // Ocupamos los primeros ids con cosas distintas para forzar el desplazamiento
+    await db.productos.add(producto('Otra cosa'))
+    await db.productos.add(producto('Y otra'))
+
+    await importar(texto, 'fusionar')
+    const plato = (await db.productos.toArray()).find((p) => p.origen === 'receta')!
+    expect(plato.ingredientes).toHaveLength(2)
+    for (const i of plato.ingredientes!) {
+      const apuntado = await db.productos.get(i.productoId)
+      expect(apuntado?.nombre).toBe(i.nombre)
+    }
+  })
+
+  it('el favorito sobrevive a la ida y vuelta', async () => {
+    await db.productos.add(producto('Atún', { favorito: true }))
+    await db.productos.add(producto('Pan', { favorito: false }))
+    const texto = JSON.stringify(await construirCopia(false))
+    await borrarTodo()
+    await importar(texto, 'reemplazar')
+
+    const todos = await db.productos.toArray()
+    expect(todos.find((p) => p.nombre === 'Atún')?.favorito).toBe(true)
+    expect(todos.find((p) => p.nombre === 'Pan')?.favorito).toBe(false)
+  })
+})
