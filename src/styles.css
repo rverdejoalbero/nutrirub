@@ -908,3 +908,45 @@ textarea::placeholder {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ------------------------------------------------------------- la puerta */
+
+.puerta {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px 20px calc(24px + var(--seguro-inf));
+}
+
+.puerta-caja {
+  width: 100%;
+  max-width: 360px;
+}
+
+/* El nombre en Archivo Expanded, como el numero de kcal: es lo primero que se
+   ve de la app y conviene que suene a lo mismo. */
+.puerta-marca {
+  font-stretch: 125%;
+  font-weight: 700;
+  font-size: clamp(2.2rem, 12vw, 3rem);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.puerta-lema {
+  margin: 0 0 32px;
+}
+
+.puerta form {
+  margin-bottom: 20px;
+}
+
+.puerta .error {
+  margin: -4px 0 14px;
+}
+
+.puerta-pie {
+  font-size: 0.78rem;
+  line-height: 1.5;
+}

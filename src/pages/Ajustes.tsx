@@ -13,8 +13,17 @@ import { borrarTodo, exportar, importar } from '../lib/copia'
 import { aNumero, ent } from '../lib/formato'
 import { kcalTeoricas } from '../lib/calc'
 import { Cabecera, Confirmar, Hoja } from '../components/UI'
+import { useCuentaYSync } from '../nube/contexto'
+import { salir } from '../nube/sesion'
 
 type EstadoPrueba = { tipo: 'ok' | 'error' | 'probando'; texto?: string } | null
+
+const ESTADO_SYNC: Record<string, string> = {
+  reposo: 'Todo al día',
+  sincronizando: 'Sincronizando…',
+  'sin-conexion': 'Sin conexión',
+  error: 'No se ha podido sincronizar',
+}
 
 export default function Ajustes() {
   const nav = useNavigate()
@@ -23,7 +32,8 @@ export default function Ajustes() {
   const [modelos, setModelos] = useState<string[] | null>(null)
   const [cargandoModelos, setCargandoModelos] = useState(false)
   const [mensaje, setMensaje] = useState<string | null>(null)
-  const [confirmar, setConfirmar] = useState<'borrar' | 'importar' | null>(null)
+  const [confirmar, setConfirmar] = useState<'borrar' | 'importar' | 'salir' | null>(null)
+  const { cuenta, sync } = useCuentaYSync()
   const ficheroPendiente = useRef<string | null>(null)
   const entradaFichero = useRef<HTMLInputElement>(null)
 
@@ -124,6 +134,35 @@ export default function Ajustes() {
       <Cabecera titulo="Ajustes" onAtras={() => nav(-1)} />
       <main>
         <div className="contenido">
+          {/* --------------------------------------------------- cuenta */}
+          <div className="seccion">
+            <h2>Tu cuenta</h2>
+          </div>
+          <div className="previo" style={{ display: 'block', textAlign: 'left' }}>
+            <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>{cuenta.usuario}</p>
+            <p className="nota" style={{ margin: '4px 0 0' }}>
+              {ESTADO_SYNC[sync.estado]}
+              {sync.pendientes > 0 && ` · ${sync.pendientes} sin subir`}
+            </p>
+          </div>
+          {sync.ultimoError && <p className="error">{sync.ultimoError}</p>}
+          <div style={{ display: 'grid', gap: 10 }}>
+            <button
+              className="boton secundario ancho"
+              onClick={sync.ahora}
+              disabled={sync.estado === 'sincronizando'}
+            >
+              {sync.estado === 'sincronizando' ? <span className="cargando" /> : 'Sincronizar ahora'}
+            </button>
+            <button className="boton secundario ancho" onClick={() => setConfirmar('salir')}>
+              Cerrar sesión
+            </button>
+          </div>
+          <p className="nota" style={{ marginTop: 10 }}>
+            Se sincroniza sola al abrir la app y cuando vuelve la conexión. Sin cobertura puedes
+            seguir apuntando: lo pendiente sube después.
+          </p>
+
           {/* ------------------------------------------------ objetivos */}
           <div className="seccion">
             <h2>Objetivos diarios</h2>
@@ -348,6 +387,23 @@ export default function Ajustes() {
             await borrarTodo()
             setConfirmar(null)
             setMensaje('Datos borrados.')
+          }}
+          onCancelar={() => setConfirmar(null)}
+        />
+      )}
+
+      {confirmar === 'salir' && (
+        <Confirmar
+          titulo="Cerrar sesión"
+          mensaje={
+            sync.pendientes > 0
+              ? `Quedan ${sync.pendientes} cambios sin subir. Si cierras ahora se quedan en este móvil hasta que vuelvas a entrar. Tus datos NO se borran.`
+              : 'Tus datos NO se borran de este móvil: siguen aquí cuando vuelvas a entrar.'
+          }
+          textoOk="Cerrar sesión"
+          onOk={async () => {
+            await salir(cuenta.id)
+            setConfirmar(null)
           }}
           onCancelar={() => setConfirmar(null)}
         />
