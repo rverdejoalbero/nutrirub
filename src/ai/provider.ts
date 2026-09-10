@@ -31,8 +31,11 @@ export class ErrorIA extends Error {
 }
 
 const ESPERA = 90_000
+/** Los modelos gratuitos se saturan a ratos; un reintento suele bastar. */
+const REINTENTOS_POR_SATURACION = 1
+const PAUSA_REINTENTO = 2500
 
-async function pedir(url: string, init: RequestInit): Promise<Response> {
+async function pedir(url: string, init: RequestInit, intento = 0): Promise<Response> {
   let res: Response
   try {
     res = await fetch(url, { ...init, signal: AbortSignal.timeout(ESPERA) })
@@ -43,6 +46,11 @@ async function pedir(url: string, init: RequestInit): Promise<Response> {
     throw new ErrorIA('No hay conexión con el servicio de IA. Comprueba la red.')
   }
   if (!res.ok) {
+    // Saturacion: esperar un momento y repetir antes de molestar al usuario.
+    if ((res.status === 503 || res.status === 429) && intento < REINTENTOS_POR_SATURACION) {
+      await new Promise((r) => setTimeout(r, PAUSA_REINTENTO))
+      return pedir(url, init, intento + 1)
+    }
     const cuerpo = await res.text().catch(() => '')
     throw new ErrorIA(mensajeDeError(res.status, cuerpo), res.status)
   }
@@ -64,7 +72,15 @@ function mensajeDeError(estado: number, cuerpo: string): string {
   if (estado === 404) return 'Ese modelo no existe o ya no está disponible. Elige otro en Ajustes.'
   if (estado === 429)
     return 'Has llegado al límite de peticiones. Espera un rato o prueba otro modelo.'
-  if (estado >= 500) return 'El servicio de IA está caído ahora mismo. Prueba en unos minutos.'
+  if (estado === 413 || /too large|payload/i.test(detalle))
+    return 'La foto pesa demasiado. Hazla otra vez enfocando solo la tabla.'
+  // 503 y 504 si son "estamos saturados". Un 500, en cambio, suele ser algo de
+  // la propia peticion: decir "el servicio esta caido" mandaba a esperar por
+  // un problema que esperando no se arregla.
+  if (estado === 503 || estado === 504)
+    return 'El modelo está saturado ahora mismo. Prueba en un par de minutos o elige otro en Ajustes.'
+  if (estado === 500)
+    return `El modelo no ha podido procesar la petición. Prueba con otra foto, o cambia de modelo en Ajustes.${detalle ? ` (${detalle.slice(0, 120)})` : ''}`
   return detalle ? `Error ${estado}: ${detalle}` : `Error ${estado} del servicio de IA.`
 }
 
