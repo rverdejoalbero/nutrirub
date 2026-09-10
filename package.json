@@ -15,6 +15,7 @@
     "comprobar": "npm run typecheck && npm test && npm run comprobar:contraste"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
     "dexie": "^4.0.10",
     "dexie-react-hooks": "^1.1.7",
     "react": "^18.3.1",
