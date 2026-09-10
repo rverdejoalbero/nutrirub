@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { alCambiarSesion, cuentaActual, type Cuenta } from './sesion'
+import { alCambiarDatos } from '../db/db'
 import { cuantosPendientes, sincronizar } from './sincronizar'
 import { transporteSupabase } from './transporte'
 
@@ -58,6 +59,12 @@ export interface Sincronizacion {
 
 /** Cada cuanto se comprueba por su cuenta, estando la app abierta. */
 const CADA = 3 * 60 * 1000
+/**
+ * Espera tras un cambio antes de subirlo. Lo justo para agrupar una racha
+ * -al registrar una comida se tocan el registro y el producto- sin que un
+ * cambio suelto se quede esperando si cierras la app enseguida.
+ */
+const TRAS_CAMBIO = 1500
 
 /**
  * Mantiene el movil al dia sin que haya que pedirlo.
@@ -112,13 +119,37 @@ export function useSincronizacion(usuarioId: string | null): Sincronizacion {
     disparar()
 
     const reloj = setInterval(disparar, CADA)
-    const alVolver = () => document.visibilityState === 'visible' && disparar()
+
+    // Al cambiar algo, subirlo enseguida. Sin esto, apuntar una comida y
+    // cerrar la app dejaba el cambio esperando al siguiente temporizador, que
+    // podia ser al dia siguiente: es lo que hizo que un producto anadido en el
+    // movil no apareciera en el ordenador.
+    let espera: ReturnType<typeof setTimeout> | null = null
+    const dejarDeEscuchar = alCambiarDatos(() => {
+      if (espera) clearTimeout(espera)
+      espera = setTimeout(disparar, TRAS_CAMBIO)
+    })
+
+    // Y al irse a segundo plano, un ultimo intento: en el movil, cerrar la app
+    // es exactamente cuando se pierde la oportunidad de subir.
+    const alCambiarVisibilidad = () => {
+      if (document.visibilityState === 'visible') disparar()
+      else if (espera) {
+        clearTimeout(espera)
+        espera = null
+        disparar()
+      }
+    }
     window.addEventListener('online', disparar)
-    document.addEventListener('visibilitychange', alVolver)
+    document.addEventListener('visibilitychange', alCambiarVisibilidad)
+    window.addEventListener('pagehide', disparar)
     return () => {
       clearInterval(reloj)
+      if (espera) clearTimeout(espera)
+      dejarDeEscuchar()
       window.removeEventListener('online', disparar)
-      document.removeEventListener('visibilitychange', alVolver)
+      document.removeEventListener('visibilitychange', alCambiarVisibilidad)
+      window.removeEventListener('pagehide', disparar)
     }
   }, [usuarioId])
 
@@ -128,9 +159,11 @@ export function useSincronizacion(usuarioId: string | null): Sincronizacion {
     const contar = () => cuantosPendientes().then((n) => vivo && setPendientes(n))
     contar()
     const reloj = setInterval(contar, 15_000)
+    const dejarDeEscuchar = alCambiarDatos(contar)
     return () => {
       vivo = false
       clearInterval(reloj)
+      dejarDeEscuchar()
     }
   }, [usuarioId])
 

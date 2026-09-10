@@ -149,6 +149,22 @@ export const soloVivos = <T extends Sincronizable>(xs: T[]): T[] => xs.filter(vi
 // Todas las escrituras pasan por aqui para que nadie se olvide de poner
 // actualizadoEn: sin esa marca, el cambio no llegaria nunca al otro movil.
 
+/**
+ * Aviso de que algo ha cambiado en local.
+ *
+ * Lo escucha la sincronizacion para subirlo enseguida en vez de esperar al
+ * siguiente temporizador. Sin esto, apuntar una comida y cerrar la app deja el
+ * cambio ahi hasta la proxima vez que la abras, que puede ser al dia siguiente.
+ */
+const oyentesCambio = new Set<() => void>()
+
+export function alCambiarDatos(f: () => void): () => void {
+  oyentesCambio.add(f)
+  return () => oyentesCambio.delete(f)
+}
+
+const avisarCambio = () => oyentesCambio.forEach((f) => f())
+
 export type NuevoProducto = Omit<Producto, keyof Sincronizable>
 export type NuevoRegistro = Omit<Registro, keyof Sincronizable>
 
@@ -156,32 +172,38 @@ export async function crearProducto(datos: NuevoProducto): Promise<Id> {
   const ahora = Date.now()
   const id = nuevoId()
   await db.alimentos.add({ ...datos, id, creadoEn: ahora, actualizadoEn: ahora, pendiente: 1 })
+  avisarCambio()
   return id
 }
 
 export async function actualizarProducto(id: Id, cambios: Partial<NuevoProducto>): Promise<void> {
   await db.alimentos.update(id, { ...cambios, actualizadoEn: Date.now(), pendiente: 1 })
+  avisarCambio()
 }
 
 export async function borrarProducto(id: Id): Promise<void> {
   const ahora = Date.now()
   await db.alimentos.update(id, { borradoEn: ahora, actualizadoEn: ahora, pendiente: 1 })
+  avisarCambio()
 }
 
 export async function crearRegistro(datos: NuevoRegistro): Promise<Id> {
   const ahora = Date.now()
   const id = nuevoId()
   await db.diario.add({ ...datos, id, creadoEn: ahora, actualizadoEn: ahora, pendiente: 1 })
+  avisarCambio()
   return id
 }
 
 export async function actualizarRegistro(id: Id, cambios: Partial<NuevoRegistro>): Promise<void> {
   await db.diario.update(id, { ...cambios, actualizadoEn: Date.now(), pendiente: 1 })
+  avisarCambio()
 }
 
 export async function borrarRegistro(id: Id): Promise<void> {
   const ahora = Date.now()
   await db.diario.update(id, { borradoEn: ahora, actualizadoEn: ahora, pendiente: 1 })
+  avisarCambio()
 }
 
 // --------------------------------------------------------- lecturas
@@ -235,6 +257,7 @@ export async function guardarObjetivos(
       actualizadoEn: ahora,
       pendiente: 1,
     })
+  avisarCambio()
 }
 
 // ------------------------------------------------------------- varios

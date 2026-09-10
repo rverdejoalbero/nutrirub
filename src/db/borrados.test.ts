@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   actualizarProducto,
+  actualizarRegistro,
+  alCambiarDatos,
+  guardarObjetivos,
   borrarProducto,
   borrarRegistro,
   crearProducto,
@@ -150,5 +153,53 @@ describe('vivo y soloVivos', () => {
     const base = { id: 'a', creadoEn: 1, actualizadoEn: 1 }
     const lista = [base, { ...base, id: 'b', borradoEn: 9 }, { ...base, id: 'c' }]
     expect(soloVivos(lista).map((x) => x.id)).toEqual(['a', 'c'])
+  })
+})
+
+describe('aviso de cambio local', () => {
+  /** Cuenta los avisos que se emiten durante una operacion. */
+  async function avisosDurante(f: () => Promise<unknown>): Promise<number> {
+    let n = 0
+    const dejar = alCambiarDatos(() => n++)
+    await f()
+    dejar()
+    return n
+  }
+
+  it('crear, actualizar y borrar avisan', async () => {
+    // La sincronizacion escucha esto para subir enseguida. Sin el aviso, el
+    // cambio espera al siguiente temporizador: si cierras la app antes, se
+    // queda en el movil. Es lo que hizo que un producto anadido en el movil
+    // no apareciera en el ordenador.
+    expect(await avisosDurante(() => crearProducto(unosMacarrones))).toBe(1)
+
+    const id = await crearProducto(unosMacarrones)
+    expect(await avisosDurante(() => actualizarProducto(id, { kcal: 300 }))).toBe(1)
+    expect(await avisosDurante(() => borrarProducto(id))).toBe(1)
+  })
+
+  it('las escrituras del diario tambien', async () => {
+    const idP = await crearProducto(unosMacarrones)
+    expect(await avisosDurante(() => crearRegistro(unaComida(idP)))).toBe(1)
+
+    const idR = await crearRegistro(unaComida(idP))
+    expect(await avisosDurante(() => actualizarRegistro(idR, { cantidad: 200 }))).toBe(1)
+    expect(await avisosDurante(() => borrarRegistro(idR))).toBe(1)
+  })
+
+  it('guardar objetivos tambien avisa', async () => {
+    expect(
+      await avisosDurante(() =>
+        guardarObjetivos({ kcal: 2400, proteinas: 150, carbohidratos: 240, grasas: 75 }),
+      ),
+    ).toBe(1)
+  })
+
+  it('dejar de escuchar deja de recibir', async () => {
+    let n = 0
+    const dejar = alCambiarDatos(() => n++)
+    dejar()
+    await crearProducto(unosMacarrones)
+    expect(n).toBe(0)
   })
 })
