@@ -22,6 +22,16 @@ export interface Sincronizable {
   actualizadoEn: number
   /** Si esta puesto, la fila esta borrada y solo sobrevive para propagarlo. */
   borradoEn?: number
+  /**
+   * Cambiada aqui y todavia no subida.
+   *
+   * Podria deducirse comparando actualizadoEn con una marca de la ultima
+   * subida, pero eso confia en el reloj: una fila que llega de otro movil con
+   * la hora adelantada moveria esa marca hacia el futuro y los cambios que
+   * hicieras despues no se subirian nunca. Una bandera explicita no depende
+   * de ningun reloj.
+   */
+  pendiente?: 1
 }
 
 export type Momento = 'desayuno' | 'almuerzo' | 'comida' | 'merienda' | 'cena' | 'otro'

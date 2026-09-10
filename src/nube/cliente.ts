@@ -48,6 +48,8 @@ export interface FilaNube {
   actualizado_en: number
   borrado_en: number | null
   contenido: Record<string, unknown>
+  /** La pone PostgreSQL al recibir la fila. Marca hasta donde hemos leido. */
+  subido_en?: string
 }
 
 export type TipoNube = FilaNube['tipo']

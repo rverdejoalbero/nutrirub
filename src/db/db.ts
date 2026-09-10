@@ -155,33 +155,33 @@ export type NuevoRegistro = Omit<Registro, keyof Sincronizable>
 export async function crearProducto(datos: NuevoProducto): Promise<Id> {
   const ahora = Date.now()
   const id = nuevoId()
-  await db.alimentos.add({ ...datos, id, creadoEn: ahora, actualizadoEn: ahora })
+  await db.alimentos.add({ ...datos, id, creadoEn: ahora, actualizadoEn: ahora, pendiente: 1 })
   return id
 }
 
 export async function actualizarProducto(id: Id, cambios: Partial<NuevoProducto>): Promise<void> {
-  await db.alimentos.update(id, { ...cambios, actualizadoEn: Date.now() })
+  await db.alimentos.update(id, { ...cambios, actualizadoEn: Date.now(), pendiente: 1 })
 }
 
 export async function borrarProducto(id: Id): Promise<void> {
   const ahora = Date.now()
-  await db.alimentos.update(id, { borradoEn: ahora, actualizadoEn: ahora })
+  await db.alimentos.update(id, { borradoEn: ahora, actualizadoEn: ahora, pendiente: 1 })
 }
 
 export async function crearRegistro(datos: NuevoRegistro): Promise<Id> {
   const ahora = Date.now()
   const id = nuevoId()
-  await db.diario.add({ ...datos, id, creadoEn: ahora, actualizadoEn: ahora })
+  await db.diario.add({ ...datos, id, creadoEn: ahora, actualizadoEn: ahora, pendiente: 1 })
   return id
 }
 
 export async function actualizarRegistro(id: Id, cambios: Partial<NuevoRegistro>): Promise<void> {
-  await db.diario.update(id, { ...cambios, actualizadoEn: Date.now() })
+  await db.diario.update(id, { ...cambios, actualizadoEn: Date.now(), pendiente: 1 })
 }
 
 export async function borrarRegistro(id: Id): Promise<void> {
   const ahora = Date.now()
-  await db.diario.update(id, { borradoEn: ahora, actualizadoEn: ahora })
+  await db.diario.update(id, { borradoEn: ahora, actualizadoEn: ahora, pendiente: 1 })
 }
 
 // --------------------------------------------------------- lecturas
@@ -224,7 +224,8 @@ export async function guardarObjetivos(
   const hoy = hoyISO()
   const ahora = Date.now()
   const deHoy = soloVivos(await db.objetivosPorFecha.where('desde').equals(hoy).toArray())[0]
-  if (deHoy) await db.objetivosPorFecha.update(deHoy.id, { ...vals, actualizadoEn: ahora })
+  if (deHoy)
+    await db.objetivosPorFecha.update(deHoy.id, { ...vals, actualizadoEn: ahora, pendiente: 1 })
   else
     await db.objetivosPorFecha.add({
       ...vals,
@@ -232,6 +233,7 @@ export async function guardarObjetivos(
       desde: hoy,
       creadoEn: ahora,
       actualizadoEn: ahora,
+      pendiente: 1,
     })
 }
 
