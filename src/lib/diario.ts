@@ -1,4 +1,5 @@
-import { db } from '../db/db'
+import { db, soloVivos } from '../db/db'
+import { nuevoId } from '../db/types'
 import type { Registro } from '../db/types'
 import { redondear } from './formato'
 
@@ -16,23 +17,27 @@ import { redondear } from './formato'
 export async function duplicarDia(desde: string, hacia: string): Promise<number> {
   if (desde === hacia) return 0
 
-  return db.transaction('rw', db.registros, db.productos, async () => {
-    const origen = await db.registros.where('fecha').equals(desde).toArray()
+  return db.transaction('rw', db.diario, db.alimentos, async () => {
+    const origen = soloVivos(await db.diario.where('fecha').equals(desde).toArray())
     if (origen.length === 0) return 0
 
     const ahora = Date.now()
     const nuevos: Registro[] = []
 
     for (const [i, r] of origen.entries()) {
-      const producto = await db.productos.get(r.productoId)
+      // Un producto borrado (logicamente) cuenta como inexistente.
+      const encontrado = await db.alimentos.get(r.productoId)
+      const producto = encontrado && !encontrado.borradoEn ? encontrado : undefined
       const escala = producto ? r.cantidad / 100 : 0
 
       nuevos.push({
         ...r,
-        id: undefined,
+        id: nuevoId(),
         fecha: hacia,
         // +i mantiene el orden dentro de cada momento del dia.
         creadoEn: ahora + i,
+        actualizadoEn: ahora + i,
+        borradoEn: undefined,
         ...(producto
           ? {
               nombreProducto: producto.marca
@@ -55,14 +60,14 @@ export async function duplicarDia(desde: string, hacia: string): Promise<number>
       })
     }
 
-    await db.registros.bulkAdd(nuevos)
+    await db.diario.bulkAdd(nuevos)
     return nuevos.length
   })
 }
 
 /** El dia con registros mas reciente anterior a la fecha dada, si lo hay. */
 export async function diaAnteriorConDatos(antesDe: string): Promise<string | null> {
-  const previos = await db.registros.where('fecha').below(antesDe).toArray()
+  const previos = soloVivos(await db.diario.where('fecha').below(antesDe).toArray())
   if (previos.length === 0) return null
   return previos.reduce((max, r) => (r.fecha > max ? r.fecha : max), previos[0].fecha)
 }

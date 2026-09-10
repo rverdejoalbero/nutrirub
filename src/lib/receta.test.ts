@@ -1,21 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { camposConocidos, componer, pesoCrudo, valoresDelPlato } from './receta'
 import type { Ingrediente, Producto } from '../db/types'
+import { unProducto } from '../pruebas/fabricas'
 
-const prod = (nombre: string, v: Partial<Producto>): Producto => ({
-  nombre,
-  unidadBase: 'g',
-  kcal: 0,
-  proteinas: 0,
-  carbohidratos: 0,
-  grasas: 0,
-  origen: 'manual',
-  creadoEn: 0,
-  ...v,
-})
+const prod = (nombre: string, v: Partial<Producto>): Producto =>
+  unProducto(nombre, { kcal: 0, proteinas: 0, carbohidratos: 0, grasas: 0, ...v })
 
 const macarrones = prod('Macarrones', {
-  id: 1,
+  id: 'macarrones',
   kcal: 359,
   proteinas: 12.5,
   carbohidratos: 71,
@@ -24,7 +16,7 @@ const macarrones = prod('Macarrones', {
   sal: 0.02,
 })
 const tomate = prod('Tomate frito', {
-  id: 2,
+  id: 'tomate',
   kcal: 82,
   proteinas: 1.5,
   carbohidratos: 9,
@@ -33,7 +25,7 @@ const tomate = prod('Tomate frito', {
   sal: 1.1,
 })
 
-const ing = (productoId: number, nombre: string, cantidad: number): Ingrediente => ({
+const ing = (productoId: string, nombre: string, cantidad: number): Ingrediente => ({
   productoId,
   nombre,
   cantidad,
@@ -41,13 +33,13 @@ const ing = (productoId: number, nombre: string, cantidad: number): Ingrediente 
 })
 
 const plato = [
-  { ingrediente: ing(1, 'Macarrones', 200), producto: macarrones },
-  { ingrediente: ing(2, 'Tomate frito', 100), producto: tomate },
+  { ingrediente: ing('macarrones', 'Macarrones', 200), producto: macarrones },
+  { ingrediente: ing('tomate', 'Tomate frito', 100), producto: tomate },
 ]
 
 describe('pesoCrudo', () => {
   it('suma los ingredientes', () => {
-    expect(pesoCrudo([ing(1, 'a', 200), ing(2, 'b', 100)])).toBe(300)
+    expect(pesoCrudo([ing('a', 'a', 200), ing('b', 'b', 100)])).toBe(300)
   })
 
   it('con la lista vacia da cero', () => {
@@ -87,7 +79,7 @@ describe('componer', () => {
   })
 
   it('avisa de los ingredientes cuyo producto ya no existe', () => {
-    const conHueco = [...plato, { ingrediente: ing(9, 'Borrado', 50), producto: undefined }]
+    const conHueco = [...plato, { ingrediente: ing('fantasma', 'Borrado', 50), producto: undefined }]
     const { faltan, totales } = componer(conHueco, 300)
     expect(faltan).toHaveLength(1)
     expect(faltan[0].nombre).toBe('Borrado')
@@ -96,7 +88,7 @@ describe('componer', () => {
   })
 
   it('un plato de un solo ingrediente sin merma reproduce su etiqueta', () => {
-    const solo = [{ ingrediente: ing(1, 'Macarrones', 100), producto: macarrones }]
+    const solo = [{ ingrediente: ing('macarrones', 'Macarrones', 100), producto: macarrones }]
     const { por100 } = componer(solo, 100)
     expect(por100.kcal).toBeCloseTo(359, 2)
     expect(por100.proteinas).toBeCloseTo(12.5, 2)
@@ -104,8 +96,8 @@ describe('componer', () => {
 
   it('escala bien si se dobla la receta', () => {
     const doble = [
-      { ingrediente: ing(1, 'Macarrones', 400), producto: macarrones },
-      { ingrediente: ing(2, 'Tomate frito', 200), producto: tomate },
+      { ingrediente: ing('macarrones', 'Macarrones', 400), producto: macarrones },
+      { ingrediente: ing('tomate', 'Tomate frito', 200), producto: tomate },
     ]
     expect(componer(doble, 1120).por100.kcal).toBeCloseTo(componer(plato, 560).por100.kcal, 5)
   })

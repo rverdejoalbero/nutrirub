@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { db, objetivosEn } from '../db/db'
+import { objetivosEn, registrosDe } from '../db/db'
 import { NOMBRE_MOMENTO } from '../db/types'
 import { sumar } from '../lib/calc'
 import { ent, gr } from '../lib/formato'
@@ -17,7 +17,7 @@ import { IconoEnviar } from '../components/Iconos'
 async function resumenDelDia(): Promise<string> {
   const fecha = hoyISO()
   const [registros, objetivo] = await Promise.all([
-    db.registros.where('fecha').equals(fecha).toArray(),
+    registrosDe(fecha),
     objetivosEn(fecha),
   ])
   const t = sumar(registros)

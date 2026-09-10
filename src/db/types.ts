@@ -1,5 +1,29 @@
 export type Unidad = 'g' | 'ml'
 
+/**
+ * Identificador global. UUID y no autoincremental: dos moviles sin conexion
+ * generarian el id 1 para cosas distintas y al sincronizar se pisarian.
+ */
+export type Id = string
+
+export const nuevoId = (): Id => crypto.randomUUID()
+
+/**
+ * Lo que todo lo sincronizable necesita ademas de sus datos.
+ *
+ * `actualizadoEn` decide quien gana cuando el mismo registro se toca en dos
+ * sitios: el mas reciente. `borradoEn` existe porque un borrado tambien es un
+ * cambio que hay que propagar; si la fila desapareciese sin mas, el otro
+ * dispositivo la volveria a subir creyendo que es nueva.
+ */
+export interface Sincronizable {
+  id: Id
+  creadoEn: number
+  actualizadoEn: number
+  /** Si esta puesto, la fila esta borrada y solo sobrevive para propagarlo. */
+  borradoEn?: number
+}
+
 export type Momento = 'desayuno' | 'almuerzo' | 'comida' | 'merienda' | 'cena' | 'otro'
 
 export const MOMENTOS: Momento[] = ['desayuno', 'almuerzo', 'comida', 'merienda', 'cena', 'otro']
@@ -20,7 +44,7 @@ export interface PorcionRapida {
 
 /** Un ingrediente dentro de un plato compuesto. */
 export interface Ingrediente {
-  productoId: number
+  productoId: Id
   /** Copia del nombre, para que el plato siga legible si se borra el producto. */
   nombre: string
   cantidad: number
@@ -28,8 +52,7 @@ export interface Ingrediente {
 }
 
 /** Biblioteca de alimentos. TODOS los valores son por 100 g / 100 ml. */
-export interface Producto {
-  id?: number
+export interface Producto extends Sincronizable {
   nombre: string
   marca?: string
   codigoBarras?: string
@@ -45,7 +68,6 @@ export interface Producto {
   porcionesRapidas?: PorcionRapida[]
   origen: 'foto' | 'manual' | 'receta'
   fotoEtiqueta?: Blob
-  creadoEn: number
   ultimoUso?: number
   /** Se ordenan primero en el buscador. */
   favorito?: boolean
@@ -71,14 +93,13 @@ export interface Producto {
  * se vuelven a tocar. Si mañana corrijo la etiqueta de un producto porque la IA
  * leyo mal un numero, el historial de la semana pasada no cambia.
  *
- * Por eso se congelan tambien fibra, azucares y sal aunque hoy no se muestren:
+ * Por eso se congelan tambien fibra, azucares y sal aunque no salgan en Hoy:
  * son campos que no se pueden reconstruir despues.
  */
-export interface Registro {
-  id?: number
+export interface Registro extends Sincronizable {
   fecha: string // 'YYYY-MM-DD'
   momento: Momento
-  productoId: number
+  productoId: Id
   nombreProducto: string
   cantidad: number
   unidad: Unidad
@@ -89,7 +110,6 @@ export interface Registro {
   azucares?: number
   fibra?: number
   sal?: number
-  creadoEn: number
 }
 
 /**
@@ -98,8 +118,7 @@ export interface Registro {
  * que es justo lo que evitamos congelando los macros. Cada cambio crea una fila
  * nueva y cada dia se compara con el objetivo que estaba vigente ese dia.
  */
-export interface Objetivos {
-  id?: number
+export interface Objetivos extends Sincronizable {
   desde: string // 'YYYY-MM-DD'
   kcal: number
   proteinas: number
@@ -107,7 +126,7 @@ export interface Objetivos {
   grasas: number
 }
 
-export const OBJETIVOS_POR_DEFECTO: Omit<Objetivos, 'id' | 'desde'> = {
+export const OBJETIVOS_POR_DEFECTO: Omit<Objetivos, keyof Sincronizable | 'desde'> = {
   kcal: 2200,
   proteinas: 140,
   carbohidratos: 220,

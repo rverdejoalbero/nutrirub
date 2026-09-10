@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { db } from '../db/db'
+import { crearProducto } from '../db/db'
 import { limpiarBorrador, tomarBorrador } from '../lib/borrador'
 import {
   FormularioProducto,
@@ -9,7 +9,6 @@ import {
   type ValoresProducto,
 } from '../components/FormularioProducto'
 import { Cabecera } from '../components/UI'
-import type { Producto } from '../db/types'
 
 const AVISO_CONFIANZA: Record<string, string> = {
   media: 'El modelo no lo ha visto todo claro. Contrasta los números con la etiqueta.',
@@ -61,14 +60,12 @@ export default function RevisarProducto() {
   const [fotoAbierta, setFotoAbierta] = useState(confianza === 'baja')
 
   async function guardar(datos: DatosProducto) {
-    const producto: Producto = {
+    await crearProducto({
       ...datos,
       origen: deIA ? 'foto' : 'manual',
       fotoEtiqueta: borrador?.foto,
-      creadoEn: Date.now(),
       ultimoUso: Date.now(),
-    }
-    await db.productos.add(producto)
+    })
     limpiarBorrador()
     nav('/alimentos', { replace: true })
   }

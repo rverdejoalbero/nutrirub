@@ -1,18 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { buscarProductos, normalizar } from './buscar'
-import type { Producto } from '../db/types'
+import { unProducto } from '../pruebas/fabricas'
 
-const p = (nombre: string, marca?: string): Producto => ({
-  nombre,
-  marca,
-  unidadBase: 'g',
-  kcal: 100,
-  proteinas: 1,
-  carbohidratos: 1,
-  grasas: 1,
-  origen: 'manual',
-  creadoEn: 0,
-})
+const p = (nombre: string, marca?: string) => unProducto(nombre, { marca, kcal: 100 })
 
 const biblioteca = [
   p('Macarrones', 'Gallo'),

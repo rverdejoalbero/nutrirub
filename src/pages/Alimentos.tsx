@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link, useNavigate } from 'react-router-dom'
-import { db } from '../db/db'
+import { actualizarProducto, productosVivos } from '../db/db'
 import { buscarProductos } from '../lib/buscar'
 import { ent } from '../lib/formato'
 import { Vacio } from '../components/UI'
@@ -27,7 +27,7 @@ export const rutaDe = (p: Producto): string =>
   p.origen === 'receta' ? `/platos/${p.id}` : `/alimentos/${p.id}`
 
 export async function alternarFavorito(p: Producto): Promise<void> {
-  if (p.id) await db.productos.update(p.id, { favorito: !p.favorito })
+  await actualizarProducto(p.id, { favorito: !p.favorito })
 }
 
 export default function Alimentos() {
@@ -36,7 +36,7 @@ export default function Alimentos() {
   const [orden, setOrden] = useState<Orden>('recientes')
   const [filtro, setFiltro] = useState<Filtro>('todos')
 
-  const productos = useLiveQuery(() => db.productos.toArray(), [], undefined)
+  const productos = useLiveQuery(() => productosVivos(), [], undefined)
   const nFavoritos = (productos ?? []).filter((p) => p.favorito).length
   const nPlatos = (productos ?? []).filter((p) => p.origen === 'receta').length
 

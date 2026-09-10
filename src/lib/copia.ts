@@ -1,10 +1,11 @@
-import { db } from '../db/db'
-import type { Objetivos, Producto, Registro } from '../db/types'
+import { db, soloVivos } from '../db/db'
+import { type Id, type Objetivos, type Producto, type Registro, nuevoId } from '../db/types'
 import { aBase64, deBase64 } from './imagen'
 import { guardarAjustes } from './ajustes'
 import { hoyISO } from './fecha'
 
-const FORMATO = 1
+/** 1: ids enteros. 2: UUIDs, marcas de tiempo y borrado logico. */
+const FORMATO = 2
 
 interface ProductoExportado extends Omit<Producto, 'fotoEtiqueta'> {
   fotoEtiqueta?: string // base64 JPEG
@@ -24,12 +25,16 @@ export interface Copia {
  * Esta es la unica copia de seguridad que existe. Las fotos van aparte porque
  * en base64 inflan un 33% y convertirian el fichero del dia a dia en algo de
  * decenas de megas que no exportarias nunca.
+ *
+ * Solo se exporta lo vivo: una copia es tu comida, no un registro de lo que
+ * borraste. Fusionar una copia antigua tampoco resucita nada, porque el
+ * borrado local es mas reciente y gana.
  */
 export async function construirCopia(incluirFotos: boolean): Promise<Copia> {
   const [productos, registros, objetivos] = await Promise.all([
-    db.productos.toArray(),
-    db.registros.toArray(),
-    db.objetivos.toArray(),
+    db.alimentos.toArray().then(soloVivos),
+    db.diario.toArray().then(soloVivos),
+    db.objetivosPorFecha.toArray().then(soloVivos),
   ])
 
   const exportados: ProductoExportado[] = []
@@ -99,7 +104,8 @@ export interface ResultadoImportacion {
 }
 
 function validar(datos: unknown): Copia {
-  if (!datos || typeof datos !== 'object') throw new Error('El fichero no contiene un objeto JSON.')
+  if (!datos || typeof datos !== 'object' || Array.isArray(datos))
+    throw new Error('El fichero no contiene un objeto JSON.')
   const c = datos as Partial<Copia>
   if (c.app !== 'nutrirub') throw new Error('Este fichero no es una copia de NutriRub.')
   if (!Array.isArray(c.productos) || !Array.isArray(c.registros))
@@ -109,7 +115,49 @@ function validar(datos: unknown): Copia {
   return { ...(c as Copia), objetivos: Array.isArray(c.objetivos) ? c.objetivos : [] }
 }
 
-async function aProducto(p: ProductoExportado): Promise<Producto> {
+/**
+ * Sube una copia del formato 1 al 2: ids enteros a UUIDs, con las referencias
+ * traducidas. Es la misma operacion que hace la base al abrirse por primera
+ * vez, pero sobre un fichero: sin esto, una copia guardada antes del cambio
+ * seria papel mojado justo el dia que la necesitas.
+ */
+function subirDelFormato1(c: Copia): Copia {
+  const ahora = Date.now()
+  const mapa = new Map<string, Id>()
+  const clave = (v: unknown) => String(v)
+
+  for (const p of c.productos) mapa.set(clave(p.id), nuevoId())
+  const ref = (viejo: unknown): Id => mapa.get(clave(viejo)) ?? clave(viejo)
+
+  return {
+    ...c,
+    formato: FORMATO,
+    productos: c.productos.map((p) => ({
+      ...p,
+      id: mapa.get(clave(p.id))!,
+      creadoEn: p.creadoEn ?? ahora,
+      actualizadoEn: ahora,
+      ...(p.ingredientes
+        ? { ingredientes: p.ingredientes.map((i) => ({ ...i, productoId: ref(i.productoId) })) }
+        : {}),
+    })),
+    registros: c.registros.map((r) => ({
+      ...r,
+      id: nuevoId(),
+      productoId: ref(r.productoId),
+      creadoEn: r.creadoEn ?? ahora,
+      actualizadoEn: ahora,
+    })),
+    objetivos: c.objetivos.map((o) => ({
+      ...o,
+      id: nuevoId(),
+      creadoEn: o.creadoEn ?? ahora,
+      actualizadoEn: ahora,
+    })),
+  }
+}
+
+function aProducto(p: ProductoExportado): Producto {
   const { fotoEtiqueta, ...resto } = p
   const producto: Producto = { ...resto }
   if (typeof fotoEtiqueta === 'string' && fotoEtiqueta) {
@@ -124,7 +172,11 @@ async function aProducto(p: ProductoExportado): Promise<Producto> {
 
 /**
  * 'reemplazar' es la restauracion de verdad: deja la base igual que el fichero.
- * 'fusionar' anade lo que no estaba, remapeando los ids para no pisar nada.
+ * 'fusionar' añade lo que falte y, si algo esta en los dos sitios, se queda la
+ * version mas reciente.
+ *
+ * Con UUIDs no hace falta remapear nada: un id identifica lo mismo en todos los
+ * dispositivos, que es justo para lo que se cambiaron.
  */
 export async function importar(
   texto: string,
@@ -136,14 +188,15 @@ export async function importar(
   } catch {
     throw new Error('El fichero no es un JSON válido.')
   }
-  const copia = validar(datos)
+  let copia = validar(datos)
+  if (copia.formato < FORMATO) copia = subirDelFormato1(copia)
 
-  return db.transaction('rw', db.productos, db.registros, db.objetivos, async () => {
+  return db.transaction('rw', db.alimentos, db.diario, db.objetivosPorFecha, async () => {
     if (modo === 'reemplazar') {
-      await Promise.all([db.productos.clear(), db.registros.clear(), db.objetivos.clear()])
-      for (const p of copia.productos) await db.productos.add(await aProducto(p))
-      await db.registros.bulkAdd(copia.registros)
-      if (copia.objetivos.length) await db.objetivos.bulkAdd(copia.objetivos)
+      await Promise.all([db.alimentos.clear(), db.diario.clear(), db.objetivosPorFecha.clear()])
+      await db.alimentos.bulkAdd(copia.productos.map(aProducto))
+      await db.diario.bulkAdd(copia.registros)
+      if (copia.objetivos.length) await db.objetivosPorFecha.bulkAdd(copia.objetivos)
       return {
         productos: copia.productos.length,
         registros: copia.registros.length,
@@ -151,72 +204,32 @@ export async function importar(
       }
     }
 
-    // Fusionar: id viejo -> id nuevo, para que los registros sigan apuntando bien.
-    const mapa = new Map<number, number>()
-    const existentes = await db.productos.toArray()
-    const clave = (n: string, m?: string) => `${n.trim().toLowerCase()}|${(m ?? '').trim().toLowerCase()}`
-    const porClave = new Map(existentes.map((p) => [clave(p.nombre, p.marca), p.id!]))
-
-    let nuevosProductos = 0
-    for (const p of copia.productos) {
-      const k = clave(p.nombre, p.marca)
-      const yaEsta = porClave.get(k)
-      if (yaEsta !== undefined) {
-        if (p.id !== undefined) mapa.set(p.id, yaEsta)
-        continue
+    /** Se queda el mas reciente; ante empate, lo que ya habia. */
+    async function fusionarEn<T extends { id: Id; actualizadoEn: number }>(
+      tabla: { get: (id: Id) => Promise<T | undefined>; put: (x: T) => Promise<unknown> },
+      entrantes: T[],
+    ): Promise<number> {
+      let n = 0
+      for (const nuevo of entrantes) {
+        const actual = await tabla.get(nuevo.id)
+        if (actual && actual.actualizadoEn >= nuevo.actualizadoEn) continue
+        await tabla.put(nuevo)
+        if (!actual) n++
       }
-      const { id, ...sinId } = await aProducto(p)
-      void id
-      const nuevoId = await db.productos.add(sinId as Producto)
-      if (p.id !== undefined) mapa.set(p.id, nuevoId)
-      porClave.set(k, nuevoId)
-      nuevosProductos++
+      return n
     }
 
-    // Los platos compuestos guardan ids de ingredientes, que tambien se han
-    // movido. Sin este paso, tras fusionar una copia un plato apuntaria a
-    // productos equivocados y sus macros dejarian de tener nada que ver.
-    for (const nuevoId of mapa.values()) {
-      const p = await db.productos.get(nuevoId)
-      if (!p?.ingredientes?.length) continue
-      const remapeados = p.ingredientes.map((i) => ({
-        ...i,
-        productoId: mapa.get(i.productoId) ?? i.productoId,
-      }))
-      if (remapeados.some((i, k) => i.productoId !== p.ingredientes![k].productoId)) {
-        await db.productos.update(nuevoId, { ingredientes: remapeados })
-      }
+    return {
+      productos: await fusionarEn(db.alimentos, copia.productos.map(aProducto)),
+      registros: await fusionarEn(db.diario, copia.registros),
+      objetivos: await fusionarEn(db.objetivosPorFecha, copia.objetivos),
     }
-
-    const yaRegistrados = new Set(
-      (await db.registros.toArray()).map((r) => `${r.fecha}|${r.momento}|${r.nombreProducto}|${r.cantidad}|${r.creadoEn}`),
-    )
-    let nuevosRegistros = 0
-    for (const r of copia.registros) {
-      const huella = `${r.fecha}|${r.momento}|${r.nombreProducto}|${r.cantidad}|${r.creadoEn}`
-      if (yaRegistrados.has(huella)) continue
-      const { id, ...sinId } = r
-      void id
-      await db.registros.add({ ...sinId, productoId: mapa.get(r.productoId) ?? r.productoId })
-      nuevosRegistros++
-    }
-
-    let nuevosObjetivos = 0
-    const desdes = new Set((await db.objetivos.toArray()).map((o) => o.desde))
-    for (const o of copia.objetivos) {
-      if (desdes.has(o.desde)) continue
-      const { id, ...sinId } = o
-      void id
-      await db.objetivos.add(sinId as Objetivos)
-      nuevosObjetivos++
-    }
-
-    return { productos: nuevosProductos, registros: nuevosRegistros, objetivos: nuevosObjetivos }
   })
 }
 
+/** Borrado local de verdad, no logico: es el boton de "empezar de cero". */
 export async function borrarTodo(): Promise<void> {
-  await db.transaction('rw', db.productos, db.registros, db.objetivos, async () => {
-    await Promise.all([db.productos.clear(), db.registros.clear(), db.objetivos.clear()])
+  await db.transaction('rw', db.alimentos, db.diario, db.objetivosPorFecha, async () => {
+    await Promise.all([db.alimentos.clear(), db.diario.clear(), db.objetivosPorFecha.clear()])
   })
 }

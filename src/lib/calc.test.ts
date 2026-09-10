@@ -1,23 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { kcalTeoricas, macrosDe, por100, revisarCoherencia, sumar } from './calc'
-import type { Producto, Registro } from '../db/types'
+import type { Registro } from '../db/types'
+import { unProducto, unRegistro } from '../pruebas/fabricas'
 
-const macarrones: Producto = {
-  id: 1,
-  nombre: 'Macarrones',
+const macarrones = unProducto('Macarrones', {
   marca: 'Gallo',
-  unidadBase: 'g',
-  kcal: 359,
-  proteinas: 12.5,
-  carbohidratos: 71,
   azucares: 3.4,
-  grasas: 1.5,
   saturadas: 0.3,
   fibra: 3,
   sal: 0.02,
-  origen: 'manual',
-  creadoEn: 0,
-}
+})
 
 describe('por100', () => {
   it('escala desde la base de 100 g', () => {
@@ -57,19 +49,8 @@ describe('macrosDe', () => {
 })
 
 describe('sumar', () => {
-  const reg = (kcal: number, p: number, c: number, g: number): Registro => ({
-    fecha: '2026-01-01',
-    momento: 'comida',
-    productoId: 1,
-    nombreProducto: 'X',
-    cantidad: 100,
-    unidad: 'g',
-    kcal,
-    proteinas: p,
-    carbohidratos: c,
-    grasas: g,
-    creadoEn: 0,
-  })
+  const reg = (kcal: number, p: number, c: number, g: number): Registro =>
+    unRegistro('x', { kcal, proteinas: p, carbohidratos: c, grasas: g })
 
   it('suma los registros del dia', () => {
     const t = sumar([reg(100, 10, 20, 5), reg(250, 30, 5, 12)])

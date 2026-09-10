@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link } from 'react-router-dom'
-import { db, objetivosEn } from '../db/db'
+import { borrarRegistro, db, objetivosEn, registrosDe } from '../db/db'
 import { MOMENTOS, NOMBRE_MOMENTO, type Momento, type Registro } from '../db/types'
 import { sumar } from '../lib/calc'
 import { ent, gr } from '../lib/formato'
@@ -40,12 +40,12 @@ export default function Hoy() {
   const [aviso, setAviso] = useState<string | null>(null)
 
   const registros = useLiveQuery(
-    () => db.registros.where('fecha').equals(fecha).toArray(),
+    () => registrosDe(fecha),
     [fecha],
     undefined,
   )
   const objetivo = useLiveQuery(() => objetivosEn(fecha), [fecha], undefined)
-  const nProductos = useLiveQuery(() => db.productos.count(), [], undefined)
+  const nProductos = useLiveQuery(async () => (await db.alimentos.toArray()).filter((p) => !p.borradoEn).length, [], undefined)
   // De donde copiar: el ultimo dia anterior que tenga algo registrado.
   const diaFuente = useLiveQuery(() => diaAnteriorConDatos(fecha), [fecha], undefined)
   const avisoCopia = useAvisoCopia() && (registros?.length ?? 0) > 0
@@ -220,7 +220,7 @@ export default function Hoy() {
           textoOk="Borrar"
           peligro
           onOk={async () => {
-            if (borrando.id) await db.registros.delete(borrando.id)
+            await borrarRegistro(borrando.id)
             setBorrando(null)
           }}
           onCancelar={() => setBorrando(null)}

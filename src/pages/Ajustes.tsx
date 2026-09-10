@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate } from 'react-router-dom'
-import { db, guardarObjetivos, objetivosActuales } from '../db/db'
+import { db, guardarObjetivos, objetivosActuales, productosVivos } from '../db/db'
 import {
   MODELOS_SUGERIDOS,
   guardarAjustes,
@@ -52,8 +52,14 @@ export default function Ajustes() {
       ? true
       : Math.abs(objNum.kcal - kcalDeMacros) / objNum.kcal <= 0.1
 
-  const nProductos = useLiveQuery(() => db.productos.count(), [], undefined)
-  const nRegistros = useLiveQuery(() => db.registros.count(), [], undefined)
+  // Contar lo vivo: las filas borradas siguen ahi para propagar el borrado,
+  // pero decirte que tienes 40 alimentos cuando borraste 15 seria mentir.
+  const nProductos = useLiveQuery(async () => (await productosVivos()).length, [], undefined)
+  const nRegistros = useLiveQuery(
+    async () => (await db.diario.toArray()).filter((r) => !r.borradoEn).length,
+    [],
+    undefined,
+  )
 
   function cambiar(parcial: Partial<typeof a>) {
     setA(guardarAjustes(parcial))

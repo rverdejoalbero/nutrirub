@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate, useParams } from 'react-router-dom'
-import { db } from '../db/db'
+import { actualizarProducto, borrarProducto, db } from '../db/db'
 import {
   FormularioProducto,
   valoresDesdeProducto,
@@ -12,12 +12,17 @@ import { Cabecera, Cargando, Confirmar, Vacio } from '../components/UI'
 export default function EditarProducto() {
   const { id } = useParams()
   const nav = useNavigate()
-  const idNum = Number(id)
+  const idProducto = id ?? ''
   // null = no existe, undefined = todavia cargando. Sin distinguirlos, un id
-  // que no esta se queda girando para siempre.
+  // que no esta se queda girando para siempre. Un producto con borradoEn
+  // tampoco existe: solo sigue ahi para propagar el borrado.
   const producto = useLiveQuery(
-    async () => (isFinite(idNum) ? ((await db.productos.get(idNum)) ?? null) : null),
-    [idNum],
+    async () => {
+      if (!idProducto) return null
+      const p = await db.alimentos.get(idProducto)
+      return p && !p.borradoEn ? p : null
+    },
+    [idProducto],
     undefined,
   )
   const [borrando, setBorrando] = useState(false)
@@ -26,13 +31,13 @@ export default function EditarProducto() {
   const [nRegistros, setNRegistros] = useState<number | null>(null)
 
   useEffect(() => {
-    if (!isFinite(idNum)) return
-    db.registros
+    if (!idProducto) return
+    db.diario
       .where('productoId')
-      .equals(idNum)
-      .count()
-      .then(setNRegistros)
-  }, [idNum])
+      .equals(idProducto)
+      .toArray()
+      .then((rs) => setNRegistros(rs.filter((r) => !r.borradoEn).length))
+  }, [idProducto])
 
   useEffect(() => {
     if (!producto?.fotoEtiqueta) return
@@ -54,7 +59,7 @@ export default function EditarProducto() {
     if (!producto?.id) return
     // Solo cambia la ficha del producto. Los registros ya escritos llevan sus
     // macros congelados, asi que el historial no se mueve.
-    await db.productos.update(producto.id, datos)
+    await actualizarProducto(producto.id, datos)
     nav(-1)
   }
 
@@ -113,7 +118,7 @@ export default function EditarProducto() {
           textoOk="Borrar"
           peligro
           onOk={async () => {
-            if (producto.id) await db.productos.delete(producto.id)
+            await borrarProducto(producto.id)
             nav('/alimentos', { replace: true })
           }}
           onCancelar={() => setBorrando(false)}

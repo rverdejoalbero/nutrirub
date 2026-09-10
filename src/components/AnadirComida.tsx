@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link } from 'react-router-dom'
-import { db } from '../db/db'
+import { actualizarProducto, actualizarRegistro, crearRegistro, db, soloVivos } from '../db/db'
 import { MOMENTOS, NOMBRE_MOMENTO, type Momento, type Producto, type Registro } from '../db/types'
 import { macrosDe } from '../lib/calc'
 import { aNumero, ent, gr, redondear } from '../lib/formato'
@@ -33,7 +33,7 @@ export function AnadirComida({
   onCerrar: () => void
 }) {
   const productos = useLiveQuery(async () => {
-    const todos = await db.productos.toArray()
+    const todos = soloVivos(await db.alimentos.toArray())
     // Favoritos primero, luego por uso reciente: en el dia a dia repites
     // casi siempre las mismas cosas y quieres tenerlas arriba sin buscar.
     return todos.sort((a, b) => {
@@ -53,7 +53,7 @@ export function AnadirComida({
   useEffect(() => {
     if (!registro) return
     let vivo = true
-    db.productos.get(registro.productoId).then((p) => {
+    db.alimentos.get(registro.productoId).then((p) => {
       if (!vivo) return
       if (p) setElegido(p)
       setCantidad(String(registro.cantidad).replace('.', ','))
@@ -92,9 +92,9 @@ export function AnadirComida({
         fibra: elegido.fibra !== undefined ? redondear((elegido.fibra * num) / 100, 2) : undefined,
         sal: elegido.sal !== undefined ? redondear((elegido.sal * num) / 100, 3) : undefined,
       }
-      if (registro?.id) await db.registros.update(registro.id, datos)
-      else await db.registros.add({ ...datos, creadoEn: Date.now() })
-      await db.productos.update(elegido.id, { ultimoUso: Date.now() })
+      if (registro) await actualizarRegistro(registro.id, datos)
+      else await crearRegistro(datos)
+      await actualizarProducto(elegido.id, { ultimoUso: Date.now() })
       onCerrar()
     } finally {
       setGuardando(false)
@@ -162,7 +162,7 @@ export function AnadirComida({
                       ? `Quitar ${p.nombre} de favoritos`
                       : `Marcar ${p.nombre} como favorito`
                   }
-                  onClick={() => p.id && db.productos.update(p.id, { favorito: !p.favorito })}
+                  onClick={() => actualizarProducto(p.id, { favorito: !p.favorito })}
                 >
                   {p.favorito ? <IconoEstrellaLlena /> : <IconoEstrella />}
                 </button>

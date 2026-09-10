@@ -1,21 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { cobertura, mediasDeNutrientes } from './estadisticas'
 import type { Registro } from '../db/types'
+import { unRegistro } from '../pruebas/fabricas'
 
-const reg = (extra: Partial<Registro> = {}): Registro => ({
-  fecha: '2026-09-09',
-  momento: 'comida',
-  productoId: 1,
-  nombreProducto: 'X',
-  cantidad: 100,
-  unidad: 'g',
-  kcal: 100,
-  proteinas: 5,
-  carbohidratos: 10,
-  grasas: 2,
-  creadoEn: 0,
-  ...extra,
-})
+const reg = (extra: Partial<Registro> = {}): Registro =>
+  unRegistro('x', { kcal: 100, proteinas: 5, carbohidratos: 10, grasas: 2, ...extra })
 
 describe('mediasDeNutrientes', () => {
   it('reparte la suma entre los dias con datos', () => {

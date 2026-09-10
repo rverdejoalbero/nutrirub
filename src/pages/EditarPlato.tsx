@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate, useParams } from 'react-router-dom'
-import { db } from '../db/db'
+import { actualizarProducto, borrarProducto, crearProducto, db, soloVivos } from '../db/db'
 import type { Ingrediente, Producto } from '../db/types'
 import { buscarProductos } from '../lib/buscar'
 import { aNumero, ent, gr } from '../lib/formato'
@@ -13,15 +13,19 @@ import { IconoAdelante, IconoCerrar, IconoMas } from '../components/Iconos'
 export default function EditarPlato() {
   const { id } = useParams()
   const nav = useNavigate()
-  const idNum = id ? Number(id) : NaN
-  const editando = isFinite(idNum)
+  const idPlato = id && id !== 'nuevo' ? id : ''
+  const editando = idPlato !== ''
 
   const existente = useLiveQuery(
-    async () => (editando ? ((await db.productos.get(idNum)) ?? null) : null),
-    [idNum, editando],
+    async () => {
+      if (!editando) return null
+      const p = await db.alimentos.get(idPlato)
+      return p && !p.borradoEn ? p : null
+    },
+    [idPlato, editando],
     undefined,
   )
-  const productos = useLiveQuery(() => db.productos.toArray(), [], undefined)
+  const productos = useLiveQuery(async () => soloVivos(await db.alimentos.toArray()), [], undefined)
 
   const [nombre, setNombre] = useState('')
   const [ingredientes, setIngredientes] = useState<Ingrediente[]>([])
@@ -50,7 +54,7 @@ export default function EditarPlato() {
     setIngredientes(existente.ingredientes ?? [])
     setPesoFinal(String(existente.pesoFinal ?? '').replace('.', ','))
     setTocoPeso(true)
-  }, [existente, idNum])
+  }, [existente, idPlato])
 
   const crudo = pesoCrudo(ingredientes)
 
@@ -76,9 +80,9 @@ export default function EditarPlato() {
 
   // No se puede meter un plato dentro de si mismo.
   const candidatos = useMemo(() => {
-    const lista = (productos ?? []).filter((p) => p.id !== idNum)
+    const lista = (productos ?? []).filter((p) => p.id !== idPlato)
     return buscarProductos(lista, consulta).slice(0, 60)
-  }, [productos, consulta, idNum])
+  }, [productos, consulta, idPlato])
 
   const sinNombre = nombre.trim() === ''
   const sinIngredientes = ingredientes.length === 0
@@ -110,12 +114,12 @@ export default function EditarPlato() {
         ingredientes,
         pesoFinal: peso,
       }
-      if (editando && existente?.id) {
+      if (editando && existente) {
         // Solo cambia la ficha. Los registros ya escritos llevan sus macros
         // congelados, asi que el historial no se mueve.
-        await db.productos.update(existente.id, datos)
+        await actualizarProducto(existente.id, datos)
       } else {
-        await db.productos.add({ ...datos, creadoEn: Date.now(), ultimoUso: Date.now() })
+        await crearProducto({ ...datos, ultimoUso: Date.now() })
       }
       nav('/alimentos', { replace: true })
     } finally {
@@ -360,7 +364,7 @@ export default function EditarPlato() {
           textoOk="Borrar"
           peligro
           onOk={async () => {
-            if (existente.id) await db.productos.delete(existente.id)
+            await borrarProducto(existente.id)
             nav('/alimentos', { replace: true })
           }}
           onCancelar={() => setBorrando(false)}

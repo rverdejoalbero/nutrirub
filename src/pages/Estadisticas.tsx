@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, objetivosEn } from '../db/db'
+import { objetivosEn, registrosEntre } from '../db/db'
 import { ent, gr } from '../lib/formato'
 import { desdeISO, ultimosDias } from '../lib/fecha'
 import { Vacio } from '../components/UI'
@@ -140,7 +140,7 @@ export default function Estadisticas() {
   const hasta = dias[dias.length - 1]
 
   const registros = useLiveQuery(
-    () => db.registros.where('fecha').between(desde, hasta, true, true).toArray(),
+    () => registrosEntre(desde, hasta),
     [desde, hasta],
     undefined,
   )

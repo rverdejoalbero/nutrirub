@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { PorcionRapida, Producto, Unidad } from '../db/types'
+import type { PorcionRapida, Producto, Sincronizable, Unidad } from '../db/types'
 import { revisarCoherencia } from '../lib/calc'
 import { aNumero } from '../lib/formato'
 import { IconoCerrar, IconoMas } from './Iconos'
@@ -7,7 +7,7 @@ import { IconoCerrar, IconoMas } from './Iconos'
 /** Lo que el formulario entrega ya validado y en numeros. */
 export type DatosProducto = Omit<
   Producto,
-  'id' | 'creadoEn' | 'origen' | 'fotoEtiqueta' | 'ultimoUso'
+  keyof Sincronizable | 'origen' | 'fotoEtiqueta' | 'ultimoUso'
 >
 
 /** Campos numericos como texto: hay que poder escribir "12,5" mientras se teclea. */
