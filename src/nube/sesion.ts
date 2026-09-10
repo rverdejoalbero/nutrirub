@@ -1,13 +1,15 @@
 import type { Session, User } from '@supabase/supabase-js'
 import { nube } from './cliente'
 import { marcarTodoParaSubir, olvidarMarca } from './sincronizar'
+import { correoDe, usuarioDe } from './usuario'
 
 export interface Cuenta {
   id: string
-  correo: string
+  /** El nombre que el usuario escribio. El correo interno no se enseña nunca. */
+  usuario: string
 }
 
-const aCuenta = (u: User): Cuenta => ({ id: u.id, correo: u.email ?? '' })
+const aCuenta = (u: User): Cuenta => ({ id: u.id, usuario: usuarioDe(u.email) })
 
 export class ErrorSesion extends Error {
   constructor(mensaje: string) {
@@ -19,17 +21,17 @@ export class ErrorSesion extends Error {
 /** Traduce los errores de Supabase, que llegan en ingles y de sistema. */
 function traducir(mensaje: string): string {
   const m = mensaje.toLowerCase()
-  if (m.includes('invalid login credentials')) return 'Correo o contraseña incorrectos.'
+  if (m.includes('invalid login credentials')) return 'Usuario o contraseña incorrectos.'
   if (m.includes('email not confirmed'))
-    return 'Todavía no has confirmado la cuenta. Abre el correo que te mandamos.'
+    return 'La cuenta está a medio crear. Hay que desactivar la confirmación por correo en Supabase.'
   if (m.includes('user already registered') || m.includes('already been registered'))
-    return 'Ya hay una cuenta con ese correo. Inicia sesión en vez de registrarte.'
+    return 'Ese nombre de usuario ya está cogido. Elige otro o inicia sesión.'
   if (m.includes('password should be at least'))
     return 'La contraseña es demasiado corta: mínimo 6 caracteres.'
   if (m.includes('unable to validate email') || m.includes('invalid email'))
-    return 'Ese correo no parece válido.'
+    return 'Ese nombre de usuario no vale. Usa solo letras, números, punto, guion y guion bajo.'
   if (m.includes('email rate limit') || m.includes('over_email_send_rate_limit'))
-    return 'Se han mandado demasiados correos seguidos. Espera un rato y vuelve a intentarlo.'
+    return 'Supabase está intentando mandar correos de confirmación. Hay que desactivar esa opción para que el registro funcione.'
   if (m.includes('failed to fetch') || m.includes('network'))
     return 'No hay conexión. Puedes seguir usando la app; se sincronizará cuando vuelva.'
   return mensaje
@@ -51,15 +53,10 @@ export interface ResultadoRegistro {
   cuenta: Cuenta | null
 }
 
-export async function registrarse(correo: string, contrasena: string): Promise<ResultadoRegistro> {
+export async function registrarse(usuario: string, contrasena: string): Promise<ResultadoRegistro> {
   const { data, error } = await nube().auth.signUp({
-    email: correo.trim(),
+    email: correoDe(usuario),
     password: contrasena,
-    options: {
-      // A donde devuelve el enlace del correo de confirmacion. Se calcula solo
-      // para que funcione igual en local que en Pages.
-      emailRedirectTo: window.location.origin + window.location.pathname,
-    },
   })
   if (error) throw new ErrorSesion(traducir(error.message))
 
@@ -70,9 +67,9 @@ export async function registrarse(correo: string, contrasena: string): Promise<R
   return { yaDentro, cuenta: data.user ? aCuenta(data.user) : null }
 }
 
-export async function entrar(correo: string, contrasena: string): Promise<Cuenta> {
+export async function entrar(usuario: string, contrasena: string): Promise<Cuenta> {
   const { data, error } = await nube().auth.signInWithPassword({
-    email: correo.trim(),
+    email: correoDe(usuario),
     password: contrasena,
   })
   if (error) throw new ErrorSesion(traducir(error.message))
@@ -91,17 +88,14 @@ async function alEntrar(usuarioId: string): Promise<void> {
   await marcarTodoParaSubir(usuarioId)
 }
 
-export async function reenviarConfirmacion(correo: string): Promise<void> {
-  const { error } = await nube().auth.resend({ type: 'signup', email: correo.trim() })
-  if (error) throw new ErrorSesion(traducir(error.message))
-}
-
-export async function recuperarContrasena(correo: string): Promise<void> {
-  const { error } = await nube().auth.resetPasswordForEmail(correo.trim(), {
-    redirectTo: window.location.origin + window.location.pathname,
-  })
-  if (error) throw new ErrorSesion(traducir(error.message))
-}
+/**
+ * No hay "he olvidado mi contraseña".
+ *
+ * Recuperarla exige mandar un correo a una direccion real, y aqui no hay
+ * ninguna: es el precio de no pedir correo al registrarse. Si alguien la
+ * pierde, hay que crearle otra cuenta desde el panel de Supabase.
+ */
+export const HAY_RECUPERACION = false
 
 /**
  * Cerrar sesion NO borra los datos locales.
