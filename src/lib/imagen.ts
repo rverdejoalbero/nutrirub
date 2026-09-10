@@ -61,6 +61,14 @@ export async function prepararImagen(file: Blob, ladoMax = LADO_MAX): Promise<Im
   if ('close' in img) img.close()
 
   const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/jpeg', CALIDAD))
+
+  // Soltar el lienzo antes de construir el base64. Una foto de iPhone son 12
+  // megapixeles y su mapa de bits ocupa decenas de megas; si se queda vivo
+  // mientras se monta la cadena en base64, Safari puede quedarse sin memoria
+  // en la pestaña, y lo primero que corta son las peticiones de red.
+  canvas.width = 0
+  canvas.height = 0
+
   if (!blob) throw new Error('no se pudo comprimir la imagen')
 
   return { blob, base64: await aBase64(blob), mime: 'image/jpeg', ancho, alto }

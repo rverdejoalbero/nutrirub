@@ -19,10 +19,15 @@ export default function NuevoProducto() {
 
   async function alElegirFoto(file: File) {
     setError(null)
+    let medidas = ''
     try {
       setEstado('preparando')
       // Reducir antes de enviar: una foto de iPhone son 3-4 MB.
       const img = await prepararImagen(file)
+      // Se guarda para poder decirlo si algo falla: saber si la foto se
+      // redujo de verdad separa "el movil no la ha reducido" de "el servicio
+      // ha fallado", que se parecen mucho desde fuera.
+      medidas = ` [original ${Math.round(file.size / 1024)} KB ${file.type || 'sin tipo'} → ${img.ancho}×${img.alto}, ${Math.round(img.blob.size / 1024)} KB]`
       setEstado('leyendo')
       const etiqueta = await leerEtiqueta({ base64: img.base64, mime: img.mime })
       // Se guarda la foto ya reducida: sirve para revisar un numero raro
@@ -32,9 +37,11 @@ export default function NuevoProducto() {
     } catch (e) {
       setEstado('elegir')
       setError(
-        e instanceof ErrorIA
+        (e instanceof ErrorIA
           ? e.message
-          : 'No se ha podido leer la etiqueta. Prueba con más luz o introduce los datos a mano.',
+          : `No se ha podido leer la etiqueta. Prueba con más luz o introduce los datos a mano. [${
+              e instanceof Error ? `${e.name}: ${e.message}` : String(e)
+            }]`) + medidas,
       )
     } finally {
       if (entrada.current) entrada.current.value = ''

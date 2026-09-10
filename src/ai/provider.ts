@@ -43,7 +43,17 @@ async function pedir(url: string, init: RequestInit, intento = 0): Promise<Respo
     if (e instanceof DOMException && e.name === 'TimeoutError') {
       throw new ErrorIA('La petición ha tardado demasiado. Inténtalo otra vez.')
     }
-    throw new ErrorIA('No hay conexión con el servicio de IA. Comprueba la red.')
+    // El detalle de abajo parece ruido, pero sin el no hay forma de distinguir
+    // "no hay cobertura" de un fallo del navegador al mandar el cuerpo, que
+    // dan exactamente el mismo TypeError.
+    const nombre = e instanceof Error ? e.name : 'Error'
+    const detalle = e instanceof Error ? e.message : String(e)
+    const cuerpo = typeof init.body === 'string' ? Math.round(init.body.length / 1024) : 0
+    throw new ErrorIA(
+      `No se ha podido enviar la petición. [${nombre}: ${detalle}` +
+        (cuerpo ? ` · cuerpo ${cuerpo} KB` : '') +
+        ']',
+    )
   }
   if (!res.ok) {
     // Saturacion: esperar un momento y repetir antes de molestar al usuario.
