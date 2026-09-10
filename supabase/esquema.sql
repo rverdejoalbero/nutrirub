@@ -68,3 +68,39 @@ create policy "cada uno cambia lo suyo"
 create policy "cada uno borra lo suyo"
   on public.datos for delete
   using (auth.uid() = usuario_id);
+
+-- ---------------------------------------------------------------------------
+-- La hora del servidor
+--
+-- `actualizado_en` viene del móvil y sirve para decidir quién gana cuando algo
+-- se toca en dos sitios. Pero NO sirve para preguntar "¿qué ha cambiado desde
+-- mi última sincronización?": dos móviles con el reloj desajustado se saltarían
+-- cambios sin enterarse, y un móvil atrasado subiría filas que el otro nunca
+-- pediría.
+--
+-- Para eso está `subido_en`, que la pone PostgreSQL. Es la misma para todos los
+-- dispositivos y siempre avanza.
+-- ---------------------------------------------------------------------------
+
+alter table public.datos
+  add column if not exists subido_en timestamptz not null default now();
+
+create index if not exists datos_por_usuario_y_subida
+  on public.datos (usuario_id, subido_en);
+
+-- Sin esto, subido_en solo se pondría al insertar y una fila modificada
+-- pasaría desapercibida para los demás dispositivos.
+create or replace function public.marcar_subida()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.subido_en := now();
+  return new;
+end;
+$$;
+
+drop trigger if exists datos_marcar_subida on public.datos;
+create trigger datos_marcar_subida
+  before insert or update on public.datos
+  for each row execute function public.marcar_subida();
