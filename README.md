@@ -1,7 +1,10 @@
 # NutriRub
 
-Seguimiento de macros para una sola persona. Sin cuentas, sin servidor, sin suscripción.
-Todo vive en el móvil.
+Seguimiento de macros. Sin suscripción, sin publicidad, sin apps de pago.
+
+Funciona en el móvil aunque no haya cobertura: los datos viven en el dispositivo y la app los
+lee y escribe ahí. Cuando hay red se sincronizan con tu cuenta, así que lo apuntado en el móvil
+aparece en el ordenador y al revés.
 
 La idea: fotografías la etiqueta nutricional de un producto **una vez**, una IA lee los macros
 por 100 g y los guarda. A partir de ahí registrar una comida es elegir el producto y poner los
@@ -23,7 +26,7 @@ como se sirve en Pages).
 | Comando | Qué hace |
 |---|---|
 | `npm run dev` | Servidor de desarrollo |
-| `npm test` | La batería de tests (165) |
+| `npm test` | La batería de tests (248) |
 | `npm run test:watch` | Tests en vigilancia mientras editas |
 | `npm run typecheck` | Solo TypeScript, sin construir |
 | `npm run build` | Construye a `dist/` y comprueba el precacheo |
@@ -44,6 +47,54 @@ llamarlo como quieras sin tocar `vite.config.ts`. En local usa `/nutrirub/`.
 
 Ábrelo **en Safari** (Chrome en iOS no sabe instalar PWAs), toca Compartir → *Añadir a pantalla
 de inicio*. A partir de ahí se abre a pantalla completa, con su icono, y arranca sin conexión.
+
+## Cuentas y sincronización
+
+Cada persona tiene su usuario y solo ve lo suyo. Quien lo impide de verdad no es la app: son las
+políticas *Row Level Security* de PostgreSQL, que rechazan cualquier consulta a filas de otro
+aunque quien pregunte tenga la clave pública. Comprobado: intentar escribir en la cuenta de otro
+devuelve `new row violates row-level security policy`.
+
+### Crear una cuenta
+
+**No hay registro dentro de la app**, a propósito. Las cuentas se crean desde el panel de
+Supabase: *Authentication → Users → Add user*.
+
+- **Email:** `<usuario>@rverdejoalbero.github.io` — la parte antes de la arroba es el usuario
+- **Password:** la que sea, mínimo 6 caracteres
+- **Marca «Auto Confirm User»**
+
+Supabase Auth solo sabe autenticar por correo o teléfono, así que el correo se fabrica a partir
+del nombre de usuario y nunca se enseña. De regalo, la unicidad sale gratis: Supabase ya exige
+correos únicos. El dominio tiene que existir de verdad en el DNS o rechaza el alta, y ese existe
+y no tiene servidor de correo, así que nunca se entregaría nada a nadie.
+
+Que no haya registro abierto encaja con lo que es esto: no es una app pública, son unas pocas
+personas. Y de paso evita los correos de confirmación, limitados a unos dos por hora en la capa
+gratuita.
+
+> **No hay «he olvidado mi contraseña».** Recuperarla exige mandar un correo a una dirección
+> real, y aquí no hay ninguna. Si alguien la pierde, se le crea otra cuenta desde el panel.
+
+### Cómo sincroniza
+
+Al abrir la app, al volver la conexión, al volver a primer plano, **al cambiar algo** (segundo y
+medio después, para agrupar la racha), al irse a segundo plano y cada tres minutos.
+
+Ese *al cambiar algo* costó un fallo real: sin él, añadir un producto en el móvil y cerrar la app
+antes del temporizador dejaba el producto ahí para siempre y no aparecía en el ordenador.
+
+Sin red no pasa nada: los cambios se marcan y suben después. Es lo que permite seguir apuntando
+en el súper sin cobertura.
+
+Ante el mismo registro tocado en dos sitios gana el más reciente. Los conflictos de verdad son
+rarísimos con una sola persona y varios dispositivos.
+
+**Las fotos de las etiquetas no viajan.** Son unos 200 KB que en JSON inflan un tercio más:
+harían lenta cada sincronización y se comerían la cuota. Se quedan en el móvil donde las hiciste.
+
+El esquema del servidor está en [supabase/esquema.sql](supabase/esquema.sql) y se puede
+reejecutar sin miedo.
 
 ## La clave de la IA
 
@@ -74,7 +125,8 @@ y sal, y lo que más repites.
 
 **Asistente.** Chat que recibe como contexto el resumen del día antes de cada respuesta.
 
-**Ajustes.** Clave y modelo, objetivos, exportar/importar y borrar todo.
+**Ajustes.** Tu cuenta y estado de sincronización, clave y modelo de la IA, objetivos,
+exportar/importar y borrar todo.
 
 ### Platos compuestos
 
@@ -119,6 +171,12 @@ sin hacer una.
 - **Los objetivos llevan histórico.** Cambiarlos no reescribe los días pasados; cada día se
   compara con el objetivo que estaba vigente entonces.
 - **Nada extraído por IA se guarda sin pasar por la pantalla de revisión.**
+- **Los identificadores son UUID, no números.** Dos móviles sin conexión generarían el `id: 1`
+  para cosas distintas y al sincronizar se pisarían.
+- **Borrar es marcar `borradoEn`, no quitar la fila.** Si desapareciera, el otro dispositivo la
+  volvería a subir creyéndola nueva y reaparecería sola.
+- **Lo pendiente de subir es una bandera explícita**, no una comparación de fechas: deducirlo del
+  reloj falla cuando un dispositivo va adelantado.
 - **No se inventa un cero.** Si ninguna etiqueta declaraba la fibra, el producto no declara
   fibra: un 0 diría «no tiene» cuando lo cierto es «no lo sabemos».
 - Las kcal se contrastan contra `4·P + 4·H + 9·G + 2·fibra`. Más de un 15 % de desviación
