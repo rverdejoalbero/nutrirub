@@ -3,7 +3,21 @@ export type Proveedor = 'gemini' | 'openrouter'
 export interface Ajustes {
   proveedor: Proveedor
   apiKey: string
+  /**
+   * Para leer etiquetas: pocas llamadas al mes, pero un numero mal leido
+   * corrompe los datos. Aqui conviene el modelo bueno aunque tenga poca cuota.
+   */
   modelo: string
+  /**
+   * Para el asistente: muchas mas llamadas y menos consecuencias si se explica
+   * regular. Aqui conviene el de cuota alta.
+   *
+   * Estan separados porque los limites gratuitos de Google son POR MODELO, y
+   * los mas nuevos traen cuotas diarias muy cortas: usar el mismo para todo
+   * hace que cuatro preguntas al chat te dejen sin poder dar de alta un
+   * producto.
+   */
+  modeloAsistente: string
   /** Marca de tiempo de la ultima exportacion, para el aviso de copia. */
   ultimaCopia: number | null
   /** Dias sin copia a partir de los cuales avisar. 0 = no avisar. */
@@ -24,6 +38,7 @@ const POR_DEFECTO: Ajustes = {
   // partida: en Ajustes hay un boton que pide la lista real a la API, que es
   // la unica fuente fiable de lo que existe hoy.
   modelo: 'gemini-2.5-flash',
+  modeloAsistente: 'gemini-2.5-flash-lite',
   ultimaCopia: null,
   avisarCopiaCada: 14,
 }

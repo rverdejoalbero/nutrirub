@@ -254,7 +254,7 @@ export default function Ajustes() {
           </label>
 
           <label className="campo">
-            <span>Modelo</span>
+            <span>Modelo para leer etiquetas</span>
             <input
               type="text"
               value={a.modelo}
@@ -269,6 +269,29 @@ export default function Ajustes() {
               ))}
             </datalist>
           </label>
+
+          <label className="campo">
+            <span>Modelo para el asistente</span>
+            <input
+              type="text"
+              value={a.modeloAsistente}
+              onChange={(e) => cambiar({ modeloAsistente: e.target.value })}
+              list="modelos"
+              autoCapitalize="none"
+              spellCheck={false}
+            />
+          </label>
+
+          <p className="nota" style={{ marginTop: -6, marginBottom: 16 }}>
+            Están separados porque los límites gratuitos de Google son <strong>por modelo</strong>,
+            y los más nuevos traen muy pocas solicitudes al día. Para leer etiquetas usas unas
+            pocas al mes y conviene el modelo bueno; el asistente gasta muchas más y le vale uno
+            con cuota alta. Consulta los tuyos en{' '}
+            <a href="https://aistudio.google.com/rate-limit" target="_blank" rel="noreferrer">
+              aistudio.google.com/rate-limit
+            </a>
+            , cambiando el modelo del desplegable de arriba.
+          </p>
 
           <div style={{ display: 'grid', gap: 10 }}>
             <button

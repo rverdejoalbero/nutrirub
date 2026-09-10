@@ -80,8 +80,14 @@ function mensajeDeError(estado: number, cuerpo: string): string {
   if (estado === 401 || estado === 403)
     return 'La clave de API no es válida o no tiene permiso. Revísala en Ajustes.'
   if (estado === 404) return 'Ese modelo no existe o ya no está disponible. Elige otro en Ajustes.'
-  if (estado === 429)
-    return 'Has llegado al límite de peticiones. Espera un rato o prueba otro modelo.'
+  if (estado === 429) {
+    // Google no distingue en el codigo si se agoto la cuota del minuto o la del
+    // dia, y la diferencia importa: una se pasa esperando y la otra no.
+    const porDia = /per day|requests per day|quota_limit_value/i.test(detalle)
+    return porDia
+      ? 'Has agotado la cuota diaria de este modelo. Elige otro en Ajustes: los más nuevos traen menos solicitudes al día.'
+      : 'Demasiadas peticiones seguidas. Espera un momento, o cambia de modelo en Ajustes si se repite.'
+  }
   if (estado === 413 || /too large|payload/i.test(detalle))
     return 'La foto pesa demasiado. Hazla otra vez enfocando solo la tabla.'
   // 503 y 504 si son "estamos saturados". Un 500, en cambio, suele ser algo de
@@ -264,11 +270,18 @@ function creaOpenRouter(apiKey: string, modelo: string): Proveedor {
 
 // ------------------------------------------------------------------ fabrica
 
-export function obtenerProveedor(): Proveedor {
-  const { proveedor, apiKey, modelo } = leerAjustes()
-  const clave = apiKey.trim()
+/** Que trabajo se va a pedir: cada uno tiene su modelo y su cuota. */
+export type Tarea = 'etiqueta' | 'asistente'
+
+export function obtenerProveedor(tarea: Tarea = 'etiqueta'): Proveedor {
+  const ajustes = leerAjustes()
+  const clave = ajustes.apiKey.trim()
   if (!clave) throw new ErrorIA('No hay clave de API guardada.')
-  return proveedor === 'openrouter' ? creaOpenRouter(clave, modelo) : creaGemini(clave, modelo)
+  const modelo =
+    (tarea === 'asistente' ? ajustes.modeloAsistente : ajustes.modelo) || ajustes.modelo
+  return ajustes.proveedor === 'openrouter'
+    ? creaOpenRouter(clave, modelo)
+    : creaGemini(clave, modelo)
 }
 
 /** Igual que obtenerProveedor pero con clave y modelo sueltos, para "Probar conexión". */

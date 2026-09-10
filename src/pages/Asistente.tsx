@@ -78,7 +78,7 @@ export default function Asistente() {
       const conContexto = historial.map((m, i) =>
         i === historial.length - 1 ? { ...m, texto: `${resumen}\n\nPregunta: ${m.texto}` } : m,
       )
-      const respuesta = await obtenerProveedor().chat(PROMPT_ASISTENTE, conContexto)
+      const respuesta = await obtenerProveedor('asistente').chat(PROMPT_ASISTENTE, conContexto)
       setMensajes([...historial, { rol: 'assistant', texto: respuesta }])
     } catch (e) {
       setError(e instanceof ErrorIA ? e.message : 'No se ha podido conectar con la IA.')
