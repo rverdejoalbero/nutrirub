@@ -20,9 +20,10 @@ const CLAVE = 'nutrirub.ajustes'
 const POR_DEFECTO: Ajustes = {
   proveedor: 'gemini',
   apiKey: '',
-  // Los IDs de Gemini rotan. Este es solo el punto de partida: en Ajustes hay
-  // un boton que pide la lista real a la API y rellena el desplegable.
-  modelo: 'gemini-2.0-flash',
+  // Los IDs de Gemini rotan cada pocos meses. Este es solo el punto de
+  // partida: en Ajustes hay un boton que pide la lista real a la API, que es
+  // la unica fuente fiable de lo que existe hoy.
+  modelo: 'gemini-2.5-flash',
   ultimaCopia: null,
   avisarCopiaCada: 14,
 }
@@ -51,7 +52,9 @@ export function guardarAjustes(a: Partial<Ajustes>): Ajustes {
 export const hayClave = (): boolean => leerAjustes().apiKey.trim().length > 0
 
 export const MODELOS_SUGERIDOS: Record<Proveedor, string[]> = {
-  gemini: ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'],
+  // Sugerencias, no verdad: usa el boton de cargar modelos para ver los que
+  // existen de verdad ahora mismo con tu clave.
+  gemini: ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.5-flash'],
   openrouter: [
     'google/gemini-2.0-flash-exp:free',
     'qwen/qwen2.5-vl-72b-instruct:free',
